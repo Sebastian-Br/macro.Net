@@ -10,14 +10,15 @@ using System.IO;
 
 namespace macro.Net.Screen
 {
-    public class FrameTime
+    public class ScreenShot
     {
+        public static string s = "a";
 
         private Size ScreenSize { get; set; }
 
         public bool Debug { get; set; }
 
-        public FrameTime()
+        public ScreenShot()
         {
             ScreenSize = new Size(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width, System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height);
             Debug = false;
@@ -47,25 +48,28 @@ namespace macro.Net.Screen
             return ToByteArray(Screenshot, ImageFormat.Bmp);
         }
 
-        public List<ScreenImageTile> GetFullScreenAsBmpByteArray_SplitScreen(int n = 2)
+        /// <summary>
+        /// file:///Visual%20Studio/Projects/macro.Net/macro.Net/Screen/ScreenShot.cs.Doc/GetFullScreenAsBmpByteArray_SplitScreen.rtf
+        /// </summary>
+        /// <param name="nr_of_screenshots"></param>
+        /// <returns></returns>
+        public List<ScreenImageTile> GetFullScreenAsBmpByteArray_SplitScreen(int nr_of_screenshots = 2)
         {
             List<ScreenImageTile> ScreenshotTiles = new();
-            int split_image_height = ScreenSize.Height / n;
-            int oversize_y = 80; //[px] the image-tiles will overlap by this number. increase when intending to recognize large characters.
-            for(int i = 0; i < n; i++)
+            int split_image_height = ScreenSize.Height / nr_of_screenshots;
+            int overlap_y = 80; //[px] the image-tiles will overlap by this number. increase when intending to recognize large characters.
+            for(int i = 0; i < nr_of_screenshots; i++)
             {
                 bool skip_last_split = false;
                 int upper_left_corner_Y = split_image_height * i;
-                int remaining_next_image_height = ScreenSize.Height - (upper_left_corner_Y + split_image_height);
+                int image_height = split_image_height + overlap_y;
+                int next_image_height_without_overlap = ScreenSize.Height - (upper_left_corner_Y + image_height);
                 int image_width = ScreenSize.Width;
-                int image_height = split_image_height + oversize_y;
-                if(remaining_next_image_height < 155)
+                if(next_image_height_without_overlap < 0.5 * overlap_y)
                 {
                     skip_last_split = true; // the last image will be too small. instead, increase the size of the current image to fit the screen
                     image_height = ScreenSize.Height - upper_left_corner_Y;
                 }
-
-                
 
                 Bitmap screenshot = new Bitmap(image_width, image_height, PixelFormat.Format32bppArgb);
                 Graphics g_screenshot = Graphics.FromImage(screenshot);
@@ -73,7 +77,7 @@ namespace macro.Net.Screen
                 if (Debug)
                 {
                     Rectangle screenshot_tile_rectangle = new Rectangle(0, upper_left_corner_Y, image_width, image_height);
-                    Paint p = new(0.4, 5000);
+                    Paint p = new(0.37, 5000);
                     p.DrawContainingRectangle(screenshot_tile_rectangle);
                     screenshot.Save(DateTime.Now.ToFileTime() + "_DBG_" + i, ImageFormat.Bmp);
                 }

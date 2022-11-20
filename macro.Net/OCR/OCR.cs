@@ -30,7 +30,7 @@ namespace macro.Net.OCR
 
         public async Task<TextMatch> GetFirstWordFromScreenTiles(string wordToMatch, StringComparison stringComparison)
         {
-            FrameTime f = new();
+            ScreenShot f = new();
             List <ScreenImageTile> image_tiles = f.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
             int i = 0;
             List<Task<TextMatch>> textMatches = new();
