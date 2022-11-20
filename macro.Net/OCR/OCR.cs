@@ -5,64 +5,58 @@ using System.Text;
 using System.Threading.Tasks;
 using Tesseract;
 using macro.Net.Screen;
+using System.Diagnostics;
 
 namespace macro.Net.OCR
 {
     internal class OCR
     {
-        public OCR(string tessDataFolder)
+        public OCR(string tessDataFolder, int _n_tiles_on_screen)
         {
-            tessEnginge = new TesseractEngine(tessDataFolder, "eng", EngineMode.Default); //"E:/Visual Studio/Projects/DxGameStat/bin/Release/net5.0/tessdata_best";
+            tessEngines = new();
+            n_tiles_on_screen = _n_tiles_on_screen;
+            for (int i = 0; i < n_tiles_on_screen; i++)
+            {
+                TesseractEngine tessEnginge = new TesseractEngine(tessDataFolder, "lat", EngineMode.TesseractOnly);
+                SetEngineFastDefaultConfig(tessEnginge);
+                tessEnginge.DefaultPageSegMode = PageSegMode.SparseText;
+                tessEngines.Add(tessEnginge);
+            }
         }
 
-        public TesseractEngine tessEnginge { get; set; }
+        public List<TesseractEngine> tessEngines { get; set; }
 
-        public string GetAllTextOnImage()
+        private int n_tiles_on_screen { get; set; }
+
+        public async Task<TextMatch> GetFirstWordFromScreenTiles(string wordToMatch, StringComparison stringComparison)
         {
-            string text = "";
-            using (var engine = tessEnginge)
+            FrameTime f = new();
+            List <ScreenImageTile> image_tiles = f.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
+            int i = 0;
+            List<Task<TextMatch>> textMatches = new();
+            foreach (ScreenImageTile tile in image_tiles)
             {
-                using (var img = Pix.LoadFromMemory(FrameTime.DbgGetFrameAsBitmapByteArray()))
+                TesseractEngine engine = tessEngines.ElementAt(i); // I think there is a compiler bug that causes this code to crash if the 'tessEngines.ElementAt(i)' part is passed as an argument
+                textMatches.Add(Task.Run(()=>GetFirstWordPosition(wordToMatch, stringComparison, tile, engine)));
+                i++;
+            }
+
+            while(true)
+            {
+                foreach(Task<TextMatch> textMatch in textMatches)
                 {
-                    var i = 1;
-                    using (var page = engine.Process(img))
+                    if(textMatch.IsCompleted)
                     {
-                        text = page.GetText();
-                        Console.WriteLine("!!!DBG Text: " + text);
-                        Console.WriteLine("!!!DBG Mean confidence: {0}", page.GetMeanConfidence());
-                        using (var iter = page.GetIterator()) // don't rly know what this does but it does something!
+                        if(textMatch.Result != null)
                         {
-                            iter.Begin();
-                            do
-                            {
-                                if (i % 2 == 0)
-                                {
-                                    Console.WriteLine("!!!DBG Line {0}", i);
-                                    do
-                                    {
-                                        if (iter.IsAtBeginningOf(PageIteratorLevel.Block))
-                                        {
-                                            Console.WriteLine("!!!DBG New block");
-                                        }
-                                        if (iter.IsAtBeginningOf(PageIteratorLevel.Para))
-                                        {
-                                            Console.WriteLine("!!!DBG New paragraph");
-                                        }
-                                        if (iter.IsAtBeginningOf(PageIteratorLevel.TextLine))
-                                        {
-                                            Console.WriteLine("!!!DBG New line");
-                                        }
-                                        Console.WriteLine("!!!DBG word: " + iter.GetText(PageIteratorLevel.Word));
-                                    } while (iter.Next(PageIteratorLevel.TextLine, PageIteratorLevel.Word));
-                                }
-                                i++;
-                            } while (iter.Next(PageIteratorLevel.Para, PageIteratorLevel.TextLine));
+                            return textMatch.Result;
                         }
                     }
                 }
+                await Task.Delay(1);
             }
 
-            return text;
+            return null;
         }
 
         /// <summary>
@@ -70,22 +64,27 @@ namespace macro.Net.OCR
         /// </summary>
         /// <param name="wordToMatch"></param>
         /// <returns></returns>
-        public TextMatch GetFirstWordPosition(string wordToMatch, StringComparison stringComparisonType, byte[] image)
+        private async Task<TextMatch> GetFirstWordPosition(string wordToMatch, StringComparison stringComparisonType, ScreenImageTile tile, TesseractEngine tessEngine)
         {
-            var engine = tessEnginge;
-            var img = Pix.LoadFromMemory(image);
-            using (var page = engine.Process(img))
+            Pix img = Pix.LoadFromMemory(tile.Image);
+            //tessEnginge.SetVariable("tessedit_char_whitelist", wordToMatch); --deprecated
+            Page page = tessEngine.Process(img);
+            Stopwatch clock = new(); clock.Start();
+            ResultIterator iter = page.GetIterator();
+            clock.Stop();
+            Console.WriteLine("GetFirstWordPosition() GetIterator exec time: " + clock.ElapsedMilliseconds);
+            string currentWordToMatch = wordToMatch;
+            TextMatch match = GetSingleTextMatchFromPage(iter, currentWordToMatch, wordToMatch, stringComparisonType);
+            page.Dispose();
+            if (match == null)
             {
-                int wordLength = wordToMatch.Length;
-                string currentWordToMatch = wordToMatch;
-                TextMatch match = GetSingleTextMatchFromPage(page.GetIterator(), currentWordToMatch, wordToMatch, stringComparisonType);
-                if (match != null)
-                {
-                    return match;
-                }
+                return null;
             }
-
-            return null;
+            else
+            {
+                match.MatchRect = new(match.MatchRect.X, match.MatchRect.Y + tile.anchor_y, match.MatchRect.Width, match.MatchRect.Height);
+                return match;
+            }
         }
 
         private TextMatch GetSingleTextMatchFromPage(ResultIterator iter, string currentWordToMatch, string wordToMatch, StringComparison stringComparisonType)
@@ -99,14 +98,14 @@ namespace macro.Net.OCR
                     string currentWord = iter.GetText(myLevel);
                     if (String.Equals(currentWordToMatch, currentWord, stringComparisonType))
                     {
+                        //Console.WriteLine("Found: " + currentWord);
                         if (iter.TryGetBoundingBox(myLevel, out var rect))
                         {
                             TextMatch result = new();
                             result.SearchText = wordToMatch;
                             result.MatchedText = currentWord;
                             result.NativeComparisonMethod = stringComparisonType;
-                            result.MatchRect = rect;
-
+                            result.SetMatchRect(rect);
                             return result;
                         }
                     }
@@ -118,6 +117,28 @@ namespace macro.Net.OCR
             }
 
             return null;
+        }
+
+        private void SetEngineFastDefaultConfig (TesseractEngine engine)
+        {
+            engine.SetVariable("language_model_penalty_punc", "0");
+            engine.SetVariable("language_model_ngram_on", "0");
+            engine.SetVariable("load_bigram_dawg", "0");
+            engine.SetVariable("load_system_dawg", "0");
+            engine.SetVariable("load_freq_dawg", "0");
+            engine.SetVariable("load_punc_dawg", "0");
+            engine.SetVariable("load_number_dawg", "0");
+            engine.SetVariable("load_unambig_dawg", "0");
+            engine.SetVariable("load_fixed_length_dawgs", "0"); //takes abt 2.4-2.5s with these settings
+
+            engine.SetVariable("tessedit_enable_doc_dict", "0");
+            engine.SetVariable("enable_noise_removal", "0");
+            engine.SetVariable("paragraph_text_based", "0");
+            engine.SetVariable("tessedit_create_txt", "0");
+            engine.SetVariable("textord_tabfind_vertical_text", "0");
+            engine.SetVariable("classify_enable_learning", "0");
+            engine.SetVariable("wordrec_enable_assoc", "0");
+            engine.SetVariable("OMP_THREAD_LIMIT", "1"); // take care with this setting
         }
     }
 }

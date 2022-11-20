@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Tesseract;
 
 namespace macro.Net.OCR
 {
@@ -31,7 +30,17 @@ namespace macro.Net.OCR
         /// <summary>
         /// The rectangle containing the matched text
         /// </summary>
-        public Rect MatchRect { get; set; }
+        public Rectangle MatchRect { get; set; }
+
+        public void SetMatchRect(Tesseract.Rect rect)
+        {
+            Rectangle newRect = new();
+            newRect.X = rect.X1;
+            newRect.Y = rect.Y1;
+            newRect.Width = rect.Width;
+            newRect.Height = rect.Height;
+            MatchRect = newRect;
+        }
 
         public StringComparison NativeComparisonMethod { get; set; }
 
