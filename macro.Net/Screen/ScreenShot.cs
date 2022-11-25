@@ -12,8 +12,6 @@ namespace macro.Net.Screen
 {
     public class ScreenShot
     {
-        public static string s = "a";
-
         private Size ScreenSize { get; set; }
 
         public bool Debug { get; set; }
@@ -24,32 +22,8 @@ namespace macro.Net.Screen
             Debug = false;
         }
 
-        public Bitmap DbgGetFullFrameAsBitmap()
-        {
-            Stopwatch clock = new(); clock.Start();
-            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb); // Graphics.CopyFromScreen copies the Screen content into this variable, too.
-            Graphics gScreenshot = Graphics.FromImage(Screenshot);
-            // Console.WriteLine("GetFrame() Execution-Time1: " + clock.ElapsedMilliseconds + " [ms]."); this is always 0 ms.
-            //Size s = new(ScreenWidth, ScreenHeight);
-            gScreenshot.CopyFromScreen(0, 0, 0, 0, new Size() { Width = 1920, Height = 1080});
-            Console.WriteLine("GetFrame() Execution-Time2: " + clock.ElapsedMilliseconds + " [ms].");
-            Screenshot.Save("Screen" + DateTime.Now.Year + "-" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + "-" + DateTime.Now.Millisecond + ".png", ImageFormat.Png);
-            clock.Stop();
-            return Screenshot;
-        }
-
-
-        public byte[] GetFullScreenAsBmpByteArray()
-        {
-            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb);
-            Graphics gScreenshot = Graphics.FromImage(Screenshot);
-            Size s = new(ScreenSize.Width, ScreenSize.Height);
-            gScreenshot.CopyFromScreen(0, 0, 0, 0, s);
-            return ToByteArray(Screenshot, ImageFormat.Bmp);
-        }
-
         /// <summary>
-        /// file:///Visual%20Studio/Projects/macro.Net/macro.Net/Screen/ScreenShot.cs.Doc/GetFullScreenAsBmpByteArray_SplitScreen.rtf
+        /// file:///E:/Visual%20Studio/Projects/macro.Net/macro.Net/Screen/ScreenShot.cs.Doc/GetFullScreenAsBmpByteArray_SplitScreen.rtf
         /// </summary>
         /// <param name="nr_of_screenshots"></param>
         /// <returns></returns>
@@ -79,7 +53,7 @@ namespace macro.Net.Screen
                     Rectangle screenshot_tile_rectangle = new Rectangle(0, upper_left_corner_Y, image_width, image_height);
                     Paint p = new(0.37, 5000);
                     p.DrawContainingRectangle(screenshot_tile_rectangle);
-                    screenshot.Save(DateTime.Now.ToFileTime() + "_DBG_" + i, ImageFormat.Bmp);
+                    screenshot.Save(DateTime.Now.ToFileTime() + "_DBG_" + i + ".png", ImageFormat.Bmp);
                 }
 
                 ScreenImageTile tile = new();
@@ -95,6 +69,12 @@ namespace macro.Net.Screen
             return ScreenshotTiles;
         }
 
+        /// <summary>
+        /// Returns the supplied image as an array of bytes.
+        /// </summary>
+        /// <param name="image">e.g. a Bitmap object</param>
+        /// <param name="format">e.g. ImageFormat.Bmp</param>
+        /// <returns></returns>
         public static byte[] ToByteArray(Image image, ImageFormat format)
         {
             using (MemoryStream ms = new MemoryStream())
@@ -102,6 +82,29 @@ namespace macro.Net.Screen
                 image.Save(ms, format);
                 return ms.ToArray();
             }
+        }
+
+        public Bitmap DbgGetFullFrameAsBitmap()
+        {
+            Stopwatch clock = new(); clock.Start();
+            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb); // Graphics.CopyFromScreen copies the Screen content into this variable, too.
+            Graphics gScreenshot = Graphics.FromImage(Screenshot);
+            // Console.WriteLine("GetFrame() Execution-Time1: " + clock.ElapsedMilliseconds + " [ms]."); this is always 0 ms.
+            //Size s = new(ScreenWidth, ScreenHeight);
+            gScreenshot.CopyFromScreen(0, 0, 0, 0, new Size() { Width = 1920, Height = 1080 });
+            Console.WriteLine("GetFrame() Execution-Time2: " + clock.ElapsedMilliseconds + " [ms].");
+            Screenshot.Save("Screen" + DateTime.Now.Year + "-" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + "-" + DateTime.Now.Millisecond + ".png", ImageFormat.Png);
+            clock.Stop();
+            return Screenshot;
+        }
+
+        public byte[] GetFullScreenAsBmpByteArray()
+        {
+            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb);
+            Graphics gScreenshot = Graphics.FromImage(Screenshot);
+            Size s = new(ScreenSize.Width, ScreenSize.Height);
+            gScreenshot.CopyFromScreen(0, 0, 0, 0, s);
+            return ToByteArray(Screenshot, ImageFormat.Bmp);
         }
     }
 }
