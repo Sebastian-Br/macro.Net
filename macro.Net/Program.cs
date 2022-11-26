@@ -1,20 +1,16 @@
-﻿using macro.Net.OCR;
+﻿using macro.Net.ImageDetection;
+using macro.Net.OCR;
 using macro.Net.Screen;
 using System.Diagnostics;
 
 using (Process proc = Process.GetCurrentProcess())
     proc.PriorityClass = ProcessPriorityClass.High;
 
-OCR ocr = new("E:\\Visual Studio\\Projects\\macro.Net\\tessdata", 4);
+ScreenShotService screenShotService = new();
+OCR ocr = new("E:\\Visual Studio\\Projects\\macro.Net\\tessdata", 4, screenShotService);
 Console.WriteLine("finished loading tessData");
+ImageDetector imageDetector = new(screenShotService, "IMAGES");
 await Task.Delay(2000);
-Stopwatch clock = new(); clock.Start();
-TextMatch awaitMatch = await ocr.GetFirstWordFromScreenTiles("await", StringComparison.InvariantCultureIgnoreCase);
-clock.Stop();
-Console.WriteLine("GetFirstWordPosition() resolved in " + clock.ElapsedMilliseconds + " [ms]");
-Paint p = new(0.34, 5000); // low opacity = high transparency
-await p.DrawContainingRectangle(awaitMatch.MatchRect);
-
 
 Console.WriteLine("2");
 

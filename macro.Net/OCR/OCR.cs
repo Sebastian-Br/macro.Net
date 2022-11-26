@@ -11,7 +11,7 @@ namespace macro.Net.OCR
 {
     internal class OCR
     {
-        public OCR(string tessDataFolder, int _n_tiles_on_screen)
+        public OCR(string tessDataFolder, int _n_tiles_on_screen, ScreenShotService sssvc)
         {
             tessEngines = new();
             n_tiles_on_screen = _n_tiles_on_screen;
@@ -22,16 +22,19 @@ namespace macro.Net.OCR
                 tessEnginge.DefaultPageSegMode = PageSegMode.SparseText;
                 tessEngines.Add(tessEnginge);
             }
+
+            ScreenShotSvc = sssvc;
         }
 
         public List<TesseractEngine> tessEngines { get; set; }
 
         private int n_tiles_on_screen { get; set; }
 
+        private ScreenShotService ScreenShotSvc { get; set; }
+
         public async Task<TextMatch> GetFirstWordFromScreenTiles(string wordToMatch, StringComparison stringComparison)
         {
-            ScreenShot f = new();
-            List <ScreenImageTile> image_tiles = f.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
+            List <ScreenImageTile> image_tiles = ScreenShotSvc.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
             int i = 0;
             List<Task<TextMatch>> textMatches = new();
             foreach (ScreenImageTile tile in image_tiles)

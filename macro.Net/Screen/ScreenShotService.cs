@@ -10,20 +10,20 @@ using System.IO;
 
 namespace macro.Net.Screen
 {
-    public class ScreenShot
+    public class ScreenShotService
     {
         private Size ScreenSize { get; set; }
 
         public bool Debug { get; set; }
 
-        public ScreenShot()
+        public ScreenShotService()
         {
             ScreenSize = new Size(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width, System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height);
             Debug = false;
         }
 
         /// <summary>
-        /// file:///E:/Visual%20Studio/Projects/macro.Net/macro.Net/Screen/ScreenShot.cs.Doc/GetFullScreenAsBmpByteArray_SplitScreen.rtf
+        /// file:///E:/Visual%20Studio/Projects/macro.Net/macro.Net/Screen/ScreenShotService.cs.Doc/GetFullScreenAsBmpByteArray_SplitScreen.rtf
         /// </summary>
         /// <param name="nr_of_screenshots"></param>
         /// <returns></returns>
@@ -84,16 +84,16 @@ namespace macro.Net.Screen
             }
         }
 
-        public Bitmap DbgGetFullFrameAsBitmap()
+        public Bitmap GetFullScreenAsBmp()
         {
             Stopwatch clock = new(); clock.Start();
             Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb); // Graphics.CopyFromScreen copies the Screen content into this variable, too.
             Graphics gScreenshot = Graphics.FromImage(Screenshot);
             // Console.WriteLine("GetFrame() Execution-Time1: " + clock.ElapsedMilliseconds + " [ms]."); this is always 0 ms.
             //Size s = new(ScreenWidth, ScreenHeight);
-            gScreenshot.CopyFromScreen(0, 0, 0, 0, new Size() { Width = 1920, Height = 1080 });
-            Console.WriteLine("GetFrame() Execution-Time2: " + clock.ElapsedMilliseconds + " [ms].");
-            Screenshot.Save("Screen" + DateTime.Now.Year + "-" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + "-" + DateTime.Now.Millisecond + ".png", ImageFormat.Png);
+            gScreenshot.CopyFromScreen(0, 0, 0, 0, ScreenSize);
+            Console.WriteLine("GetFullScreenAsBmp() Execution-Time: " + clock.ElapsedMilliseconds + " [ms].");
+            //Screenshot.Save("Screen" + DateTime.Now.Year + "-" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + "-" + DateTime.Now.Millisecond + ".png", ImageFormat.Png);
             clock.Stop();
             return Screenshot;
         }
