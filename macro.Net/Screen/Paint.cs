@@ -16,17 +16,17 @@ namespace macro.Net.Screen
      */
     internal class Paint
     {
-        public Paint(double _opacity, int _defaultDelay_Ms)
+        public Paint(double _opacity, int _draw_duration_ms)
         {
             Opacity = _opacity;
-            DefaultDelay_Ms = _defaultDelay_Ms;
+            Draw_Duration = _draw_duration_ms;
 
             LineWidthForContainingRectangle = 5;
             DrawCenterForm = false;
         }
         private double Opacity {  get; set; }
 
-        public int DefaultDelay_Ms { get; set; }
+        public int Draw_Duration { get; set; }
 
         public int LineWidthForContainingRectangle { get; set; }
 
@@ -54,7 +54,7 @@ namespace macro.Net.Screen
                 centerForm = await DrawFormAsync(Color.Blue, rectangle);
             }
 
-            Task.Delay(DefaultDelay_Ms).Wait();
+            Task.Delay(Draw_Duration).Wait();
 
             DisableForm(topForm);
             DisableForm(bottomForm);

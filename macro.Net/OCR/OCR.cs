@@ -11,13 +11,14 @@ namespace macro.Net.OCR
 {
     internal class OCR
     {
-        public OCR(string tessDataFolder, int _n_tiles_on_screen, ScreenShotService sssvc)
+        public OCR(string tessdata_dir, int _n_tiles_on_screen, ScreenShotService sssvc)
         {
             tessEngines = new();
             n_tiles_on_screen = _n_tiles_on_screen;
             for (int i = 0; i < n_tiles_on_screen; i++)
             {
-                TesseractEngine tessEnginge = new TesseractEngine(tessDataFolder, "lat", EngineMode.TesseractOnly);
+                string tessdir = (AppDomain.CurrentDomain.BaseDirectory + tessdata_dir).Replace("\\", "/");
+                TesseractEngine tessEnginge = new TesseractEngine(tessdir, "lat", EngineMode.TesseractOnly);
                 SetEngineFastDefaultConfig(tessEnginge);
                 tessEnginge.DefaultPageSegMode = PageSegMode.SparseText;
                 tessEngines.Add(tessEnginge);
@@ -36,17 +37,18 @@ namespace macro.Net.OCR
         {
             List <ScreenImageTile> image_tiles = ScreenShotSvc.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
             int i = 0;
-            List<Task<TextMatch>> textMatches = new();
+            List<Task<TextMatch>> text_match_tasks = new();
             foreach (ScreenImageTile tile in image_tiles)
             {
                 TesseractEngine engine = tessEngines.ElementAt(i); // I think there is a compiler bug that causes this code to crash if the 'tessEngines.ElementAt(i)' part is passed as an argument
-                textMatches.Add(Task.Run(()=>GetFirstWordPosition(wordToMatch, stringComparison, tile, engine)));
+                text_match_tasks.Add(Task.Run(()=>GetFirstWordPosition(wordToMatch, stringComparison, tile, engine)));
                 i++;
             }
 
             while(true)
             {
-                foreach(Task<TextMatch> textMatch in textMatches)
+                int completedTaskCount = 0;
+                foreach(Task<TextMatch> textMatch in text_match_tasks)
                 {
                     if(textMatch.IsCompleted)
                     {
@@ -54,12 +56,18 @@ namespace macro.Net.OCR
                         {
                             return textMatch.Result;
                         }
+
+                        completedTaskCount++;
                     }
                 }
+
+                if(completedTaskCount == text_match_tasks.Count)
+                {
+                    return null;
+                }
+
                 await Task.Delay(1);
             }
-
-            return null;
         }
 
         /// <summary>

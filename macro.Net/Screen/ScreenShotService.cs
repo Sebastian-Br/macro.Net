@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.IO;
+using macro.Net.ImageProcessing;
 
 namespace macro.Net.Screen
 {
@@ -45,7 +46,7 @@ namespace macro.Net.Screen
                     image_height = ScreenSize.Height - upper_left_corner_Y;
                 }
 
-                Bitmap screenshot = new Bitmap(image_width, image_height, PixelFormat.Format32bppArgb);
+                Bitmap screenshot = new Bitmap(image_width, image_height, PixelFormat.Format24bppRgb);
                 Graphics g_screenshot = Graphics.FromImage(screenshot);
                 g_screenshot.CopyFromScreen(0, upper_left_corner_Y, 0, 0, new Size(image_width, image_height));
                 if (Debug)
@@ -58,7 +59,7 @@ namespace macro.Net.Screen
 
                 ScreenImageTile tile = new();
                 tile.anchor_y = upper_left_corner_Y; //Tesseract can only know the position of text relative to the screenshot that is passed to it. The absolute position on the screen has to be restored
-                tile.Image = ToByteArray(screenshot, ImageFormat.Bmp);
+                tile.Image = ImageProcessor.ToByteArray(screenshot, ImageFormat.Bmp);
                 ScreenshotTiles.Add (tile);
                 if (skip_last_split)
                 {
@@ -69,42 +70,49 @@ namespace macro.Net.Screen
             return ScreenshotTiles;
         }
 
-        /// <summary>
-        /// Returns the supplied image as an array of bytes.
-        /// </summary>
-        /// <param name="image">e.g. a Bitmap object</param>
-        /// <param name="format">e.g. ImageFormat.Bmp</param>
-        /// <returns></returns>
-        public static byte[] ToByteArray(Image image, ImageFormat format)
+        public Bitmap GetFullScreenAsBmp_24bppRgb()
         {
-            using (MemoryStream ms = new MemoryStream())
-            {
-                image.Save(ms, format);
-                return ms.ToArray();
-            }
-        }
-
-        public Bitmap GetFullScreenAsBmp()
-        {
-            Stopwatch clock = new(); clock.Start();
-            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb); // Graphics.CopyFromScreen copies the Screen content into this variable, too.
+            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format24bppRgb); // Graphics.CopyFromScreen copies the Screen content into this variable, too
             Graphics gScreenshot = Graphics.FromImage(Screenshot);
-            // Console.WriteLine("GetFrame() Execution-Time1: " + clock.ElapsedMilliseconds + " [ms]."); this is always 0 ms.
-            //Size s = new(ScreenWidth, ScreenHeight);
             gScreenshot.CopyFromScreen(0, 0, 0, 0, ScreenSize);
-            Console.WriteLine("GetFullScreenAsBmp() Execution-Time: " + clock.ElapsedMilliseconds + " [ms].");
             //Screenshot.Save("Screen" + DateTime.Now.Year + "-" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + "-" + DateTime.Now.Millisecond + ".png", ImageFormat.Png);
-            clock.Stop();
             return Screenshot;
         }
 
-        public byte[] GetFullScreenAsBmpByteArray()
+        public Bitmap GetScreenAreaAsBmp_24bppRgb(Rectangle rectangle)
         {
-            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format32bppArgb);
+            Bitmap Screenshot = new Bitmap(rectangle.Width, rectangle.Height, PixelFormat.Format24bppRgb); // Graphics.CopyFromScreen copies the Screen content into this variable, too
+            Graphics gScreenshot = Graphics.FromImage(Screenshot);
+            gScreenshot.CopyFromScreen(rectangle.X, rectangle.Y, 0, 0, new Size() { Height = rectangle .Height, Width = rectangle.Width});
+            return Screenshot;
+        }
+
+        public byte[] GetFullScreenAsBmpByteArray_24bppRgb()
+        {
+            Bitmap Screenshot = new Bitmap(ScreenSize.Width, ScreenSize.Height, PixelFormat.Format24bppRgb);
             Graphics gScreenshot = Graphics.FromImage(Screenshot);
             Size s = new(ScreenSize.Width, ScreenSize.Height);
             gScreenshot.CopyFromScreen(0, 0, 0, 0, s);
-            return ToByteArray(Screenshot, ImageFormat.Bmp);
+            //Screenshot.Save("FullScreen.JPG");
+            return ImageProcessor.BmpToByteArray(Screenshot);
+        }
+        public byte[] DbgGetFileAsByteArray_24BppArgb(string filePath)
+        {
+            Bitmap bmpFromFile = new Bitmap(filePath);
+            Color c = bmpFromFile.GetPixel(0, 0);
+            //byte[] b = ImageProcessor.ToByteArray(bmpFromFile, ImageFormat.Bmp);
+            byte[] b = ImageProcessor.BmpToByteArray(bmpFromFile);
+            return b;
+        }
+
+        public int GetScreenWidth()
+        {
+            return ScreenSize.Width;
+        }
+
+        public int GetScreenHeight()
+        {
+            return ScreenSize.Height;
         }
     }
 }

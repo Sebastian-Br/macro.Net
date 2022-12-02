@@ -8,15 +8,11 @@ namespace macro.Net.ImageDetection
 {
     internal class ImageMatch
     {
-        public ImageMatch(Bitmap _ImageToMatch)
+        public ImageMatch(Rectangle _rectangle)
         {
-            ImageToMatch = _ImageToMatch;
+            rectangle= _rectangle;
         }
 
-        public ImageMatch(string FilePath)
-        {
-            ImageToMatch = new Bitmap(FilePath);
-        }
-        private Bitmap ImageToMatch { get; set; }
+        private Rectangle rectangle { get; set; }
     }
 }
