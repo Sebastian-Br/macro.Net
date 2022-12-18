@@ -7,7 +7,7 @@ using System.Diagnostics;
 using (Process proc = Process.GetCurrentProcess())
     proc.PriorityClass = ProcessPriorityClass.High;
 
-ScreenShotService screenShotService = new();
+ScreenShotService screenShotService = new(80);
 OCR ocr = new("tessdata", 4, screenShotService);
 Console.WriteLine("finished loading tessData");
 ImageDetector imageDetector = new(screenShotService, "IMAGES");
@@ -15,7 +15,7 @@ await Task.Delay(2000);
 
 Stopwatch s = new();
 s.Start();
-TextMatch m = await ocr.GetFirstWordFromScreenTiles("await", StringComparison.InvariantCultureIgnoreCase);
+TextMatch m = await ocr.GetFirstWordFromFullScreenTiles("await", StringComparison.InvariantCultureIgnoreCase);
 s.Stop();
 Console.WriteLine("Textmatch time elapsed: " + s.ElapsedMilliseconds);
 Paint p = new(0.45, 7000);

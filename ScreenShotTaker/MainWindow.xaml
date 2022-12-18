@@ -1,0 +1,16 @@
+﻿<Window x:Class="ScreenShotTaker.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ScreenShotTaker"
+        mc:Ignorable="d"
+        Title="Screenshot Taker" Height="212" Width="350" ResizeMode="NoResize">
+    <Viewbox>
+        <Grid>
+            <Button Content="..." HorizontalAlignment="Left" Margin="264,20,0,126" Width="22" Click="Button_Click"/>
+            <TextBox x:Name="TextBoxDefaultPath" TextWrapping="Wrap" Text="TextBox" Margin="0,20,27,124"/>
+            <Label Content="Press LCONTROL to take a screenshot" HorizontalAlignment="Left" Height="25" Margin="10,83,0,0" VerticalAlignment="Top" Width="249"/>
+        </Grid>
+    </Viewbox>
+</Window>

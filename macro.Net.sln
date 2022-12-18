@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "macro.Net", "macro.Net\macro.Net.csproj", "{4804C327-59BB-4D0A-B2D5-750B918810AF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "macro.Net", "macro.Net\macro.Net.csproj", "{4804C327-59BB-4D0A-B2D5-750B918810AF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScreenShotTaker", "ScreenShotTaker\ScreenShotTaker.csproj", "{75B4BBC7-062A-4ABE-86B5-8270C8A80DAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{4804C327-59BB-4D0A-B2D5-750B918810AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4804C327-59BB-4D0A-B2D5-750B918810AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4804C327-59BB-4D0A-B2D5-750B918810AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75B4BBC7-062A-4ABE-86B5-8270C8A80DAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75B4BBC7-062A-4ABE-86B5-8270C8A80DAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75B4BBC7-062A-4ABE-86B5-8270C8A80DAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75B4BBC7-062A-4ABE-86B5-8270C8A80DAA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

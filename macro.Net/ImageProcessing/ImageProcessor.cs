@@ -1,6 +1,7 @@
 ﻿using AForge.Imaging;
 using macro.Net.Screen;
 using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
 using System.Linq;
@@ -55,6 +56,59 @@ namespace macro.Net.ImageProcessing
             catch (Exception ex)
             {
 
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Searches in an image 'searchIn' for another image 'searchFor'
+        /// </summary>
+        /// <param name="searchIn">The byte representation of the image you intend to search</param>
+        /// <param name="searchInWidth">The width of that image</param>
+        /// <param name="searchInHeight">The height of that image</param>
+        /// <param name="searchFor">The byte representation of the image you want to search for</param>
+        /// <param name="searchForWidth">The width of the searchFor image</param>
+        /// <param name="searchForHeight">The height of the searchFor image</param>
+        /// <returns>A list of rectangles detailing the positions of where the image searchFor was found.</returns>
+        public List<Rectangle> FindAllImagesInImage_24bppRGB(byte[] searchIn, int searchInWidth, int searchInHeight, byte[] searchFor, int searchForWidth, int searchForHeight, int max_difference_per_px)
+        {
+            List<Rectangle> results = new();
+            try
+            {
+                for (int searchInY = 0; searchInY < searchInHeight - (searchForHeight - 1); searchInY++)
+                {
+                    for (int searchInX = 0; searchInX < searchInWidth - (searchForWidth - 1); searchInX++)
+                    {
+                        if (Compare3Bytes(searchIn, (searchInY * searchInWidth + searchInX) * 3, searchFor, 0, max_difference_per_px)) // test if the current pixel matches the upper left corner of the searchFor image
+                        {
+                            for (int compare_images_y = 0; compare_images_y < searchForHeight; compare_images_y++)
+                            {
+                                for (int compare_images_x = 0; compare_images_x < searchForWidth; compare_images_x++)
+                                {
+                                    if (!Compare3Bytes(searchIn, ((searchInY + compare_images_y) * searchInWidth + searchInX + compare_images_x) * 3, searchFor, (compare_images_y * searchForWidth + compare_images_x) * 3, max_difference_per_px))
+                                    {
+                                        goto location_next_pixel;
+                                    }
+                                }
+                            }
+
+                            Rectangle rectangle = new Rectangle(searchInX, searchInY, searchForWidth, searchForHeight);
+                            results.Add(rectangle);
+                        }
+
+                    location_next_pixel:;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            if(results.Count > 0)
+            {
+                return results;
             }
 
             return null;
@@ -123,7 +177,7 @@ namespace macro.Net.ImageProcessing
         /// <param name="image">e.g. a Bitmap object</param>
         /// <param name="format">e.g. ImageFormat.Bmp</param>
         /// <returns></returns>
-        public static byte[] ToByteArray(System.Drawing.Image image, ImageFormat format)
+        public static byte[] ToByteArray_AnyFormat(System.Drawing.Image image, ImageFormat format)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -140,15 +194,14 @@ namespace macro.Net.ImageProcessing
         /// <param name="image">a Bitmap object</param>
         /// <param name="format">e.g. ImageFormat.Bmp</param>
         /// <returns></returns>
-        public static byte[] BmpToByteArray(Bitmap in_bitmap)
+        public static byte[] BmpToByteArray_24bpp(Bitmap in_bitmap)
         {
             // Lock the bitmap's bits.  
             Rectangle rect = new Rectangle(0, 0, in_bitmap.Width, in_bitmap.Height);
             Bitmap bmp;
             if (in_bitmap.PixelFormat != PixelFormat.Format24bppRgb)
             {
-                return ConvertTo24bppByteArray(in_bitmap);
-                //bmp = ConvertTo24bpp(in_bitmap);
+                return Convert32To24bppByteArray(in_bitmap);
             }
             else
             {
@@ -163,7 +216,7 @@ namespace macro.Net.ImageProcessing
             IntPtr ptr = bmpData.Scan0;
 
             // Declare an array to hold the bytes of the bitmap.
-            int bytes = Abs(bmpData.Width) * bmp.Height * 3;
+            int bytes = bmpData.Width * bmp.Height * 3;
             byte[] rgbValues = new byte[bytes];
 
             // Copy the RGB values into the array.
@@ -171,12 +224,6 @@ namespace macro.Net.ImageProcessing
 
             // Unlock the bits.
             bmp.UnlockBits(bmpData);
-            /*foreach(byte b in rgbValues)
-            {
-                Console.WriteLine(b);
-            }
-
-            Console.WriteLine(rgbValues.Length);*/
             return rgbValues;
         }
 
@@ -196,7 +243,7 @@ namespace macro.Net.ImageProcessing
             return rgbValues;
         }
 
-        private static byte[] ConvertTo24bppByteArray(System.Drawing.Bitmap img)
+        private static byte[] Convert32To24bppByteArray(System.Drawing.Bitmap img)
         {
             /*var bmp = new Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             using (var gr = Graphics.FromImage(bmp))

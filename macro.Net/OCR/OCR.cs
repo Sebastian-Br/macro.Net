@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using Tesseract;
 using macro.Net.Screen;
 using System.Diagnostics;
+using macro.Net.ImageProcessing;
 
 namespace macro.Net.OCR
 {
-    internal class OCR
+    public class OCR
     {
         public OCR(string tessdata_dir, int _n_tiles_on_screen, ScreenShotService sssvc)
         {
@@ -33,7 +34,7 @@ namespace macro.Net.OCR
 
         private ScreenShotService ScreenShotSvc { get; set; }
 
-        public async Task<TextMatch> GetFirstWordFromScreenTiles(string wordToMatch, StringComparison stringComparison)
+        public async Task<TextMatch> GetFirstWordFromFullScreenTiles(string wordToMatch, StringComparison stringComparison)
         {
             List <ScreenImageTile> image_tiles = ScreenShotSvc.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
             int i = 0;
@@ -71,6 +72,40 @@ namespace macro.Net.OCR
         }
 
         /// <summary>
+        /// UNTESTED
+        /// </summary>
+        /// <param name="area">The area on the screen to search</param>
+        /// <param name="wordToMatch">The word to match</param>
+        /// <param name="stringComparison">The string comparison method used to compare results from </param>
+        /// <returns></returns>
+        public async Task<TextMatch> GetFirstWordFromScreenArea(Rectangle area, string wordToMatch, StringComparison stringComparison)
+        {
+            if(area.Width == System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width && area.Height == System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height)
+            {
+                return await GetFirstWordFromFullScreenTiles(wordToMatch, stringComparison);
+            }
+            TesseractEngine engine = tessEngines.First();
+            byte[] area_bytes = ScreenShotSvc.GetScreenAreaAsBmpByteArray_24bppRgb(area);
+            string current_word_to_match = wordToMatch; // nice-to-have: if the full word is not found, search for sub-strings
+            Pix img = Pix.LoadFromMemory(area_bytes);
+            Page page = engine.Process(img);
+            Stopwatch clock = new(); clock.Start();
+            ResultIterator iter = page.GetIterator();
+            clock.Stop();
+            Console.WriteLine("GetFirstWordFromScreenArea() GetIterator exec time: " + clock.ElapsedMilliseconds);
+            TextMatch match = GetSingleTextMatchFromPage(iter, current_word_to_match, wordToMatch, stringComparison);
+            page.Dispose();
+
+            if(match != null)
+            {
+                match.MatchRect = new(match.MatchRect.X + area.X, match.MatchRect.Y + area.Y, match.MatchRect.Width, match.MatchRect.Height); // recalculate the position
+                return match;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Gets the position of the first matched word and returns a rectangle that contains said word.
         /// </summary>
         /// <param name="wordToMatch"></param>
@@ -87,15 +122,13 @@ namespace macro.Net.OCR
             string currentWordToMatch = wordToMatch;
             TextMatch match = GetSingleTextMatchFromPage(iter, currentWordToMatch, wordToMatch, stringComparisonType);
             page.Dispose();
-            if (match == null)
-            {
-                return null;
-            }
-            else
+            if (match != null)
             {
                 match.MatchRect = new(match.MatchRect.X, match.MatchRect.Y + tile.anchor_y, match.MatchRect.Width, match.MatchRect.Height);
                 return match;
             }
+
+            return null;
         }
 
         private TextMatch GetSingleTextMatchFromPage(ResultIterator iter, string currentWordToMatch, string wordToMatch, StringComparison stringComparisonType)

@@ -9,7 +9,7 @@ namespace macro.Net.OCR
     /// <summary>
     /// The result of an OCR (optical character recognition) text match.
     /// </summary>
-    internal class TextMatch
+    public class TextMatch
     {
         public TextMatch()
         {
@@ -50,6 +50,7 @@ namespace macro.Net.OCR
     /// <summary>
     /// Indicates whether there is an incomplete match, i.e.
     /// there might be more text to the right, left, or none at all (the match is complete).
+    /// This is a nice-to-have and currently not implemented.
     /// </summary>
     public enum Incomplete : ushort
     {

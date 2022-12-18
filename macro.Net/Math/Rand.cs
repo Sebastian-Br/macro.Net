@@ -41,7 +41,7 @@ namespace macro.Net.Math // to avoid namespace colission
             }
             catch (Exception e)
             {
-                Console.WriteLine("GetStandardRand(): Something went wrong! " + e);
+                Console.WriteLine("GetStandardRand(): " + e);
                 return mean;
             }
 

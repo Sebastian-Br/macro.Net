@@ -14,5 +14,10 @@ namespace macro.Net.ImageDetection
         }
 
         private Rectangle rectangle { get; set; }
+
+        public Rectangle GetRectangle()
+        {
+            return rectangle;
+        }
     }
 }
