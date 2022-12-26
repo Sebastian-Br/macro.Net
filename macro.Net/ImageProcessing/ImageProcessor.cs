@@ -1,4 +1,4 @@
-﻿using AForge.Imaging;
+﻿using macro.Net.ImageDetection;
 using macro.Net.Screen;
 using System;
 using System.CodeDom.Compiler;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace macro.Net.ImageProcessing
 {
-    internal class ImageProcessor
+    public class ImageProcessor
     {
         public ImageProcessor() { }
 
@@ -271,6 +271,114 @@ namespace macro.Net.ImageProcessing
             if (x < 0)
                 return -x;
             return x;
+        }
+
+        public static Rectangle CropRectangleToScreenBoundaries(Rectangle rectangle_src)
+        {
+            int screen_width = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width;
+            int screen_height = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height;
+
+            Rectangle rectangle = new(rectangle_src.X, rectangle_src.Y, rectangle_src.Width, rectangle_src.Height);
+
+            int result_rectangle_X;
+            int result_rectangle_Y;
+            int result_rectangle_width;
+            int result_rectangle_height;
+
+            if (rectangle.X < 0)
+            {
+                result_rectangle_X = 0;
+                rectangle.X = 0;
+            }
+            else
+            {
+                result_rectangle_X = rectangle.X;
+            }
+
+            if (rectangle.Y < 0)
+            {
+                result_rectangle_Y = 0;
+                rectangle.Y = 0;
+            }
+            else
+            {
+                result_rectangle_Y = rectangle.Y;
+            }
+
+            if (rectangle.Right > screen_width)
+            {
+                result_rectangle_width = screen_width - rectangle.X + 1;
+            }
+            else
+            {
+                result_rectangle_width = rectangle.Width;
+            }
+
+            if (rectangle.Bottom > screen_height)
+            {
+                result_rectangle_height = screen_height - rectangle.Y + 1;
+            }
+            else
+            {
+                result_rectangle_height = rectangle.Height;
+            }
+
+            Rectangle result = new(result_rectangle_X, result_rectangle_Y, result_rectangle_width, result_rectangle_height);
+            return result;
+        }
+
+        public static Rectangle CropRectangleToRectangle(Rectangle contained_rectangle, Rectangle containing_rectangle)
+        {
+            int containing_rect_width = containing_rectangle.Width;
+            int containing_rect_height = containing_rectangle.Height;
+
+            Rectangle rectangle = new(contained_rectangle.X, contained_rectangle.Y, contained_rectangle.Width, contained_rectangle.Height);
+
+            int result_rectangle_X;
+            int result_rectangle_Y;
+            int result_rectangle_width;
+            int result_rectangle_height;
+
+            if (rectangle.X < containing_rectangle.X)
+            {
+                result_rectangle_X = containing_rectangle.X;
+                rectangle.X = containing_rectangle.X;
+            }
+            else
+            {
+                result_rectangle_X = rectangle.X;
+            }
+
+            if (rectangle.Y < containing_rectangle.Y)
+            {
+                result_rectangle_Y = containing_rectangle.Y;
+                rectangle.Y = containing_rectangle.Y;
+            }
+            else
+            {
+                result_rectangle_Y = rectangle.Y;
+            }
+
+            if (rectangle.Right > containing_rect_width)
+            {
+                result_rectangle_width = containing_rect_width - rectangle.X + 1;
+            }
+            else
+            {
+                result_rectangle_width = rectangle.Width;
+            }
+
+            if (rectangle.Bottom > containing_rect_height)
+            {
+                result_rectangle_height = containing_rect_height - rectangle.Y + 1;
+            }
+            else
+            {
+                result_rectangle_height = rectangle.Height;
+            }
+
+            Rectangle result = new(result_rectangle_X, result_rectangle_Y, result_rectangle_width, result_rectangle_height);
+            return result;
         }
     }
 }

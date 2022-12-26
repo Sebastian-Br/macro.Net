@@ -1,4 +1,5 @@
-﻿using macro.Net.ImageDetection;
+﻿using macro.Net.Engine;
+using macro.Net.ImageDetection;
 using macro.Net.ImageProcessing;
 using macro.Net.OCR;
 using System;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace macro.Net.Templates
 {
-    internal class MatchTemplate
+    public class MatchTemplate
     {
         /// <summary>
         /// Constructs a MatchTemplate to match an image inside the specified region of interest on the screen.
@@ -19,17 +20,20 @@ namespace macro.Net.Templates
         /// <param name="_default_region_of_interest">The rectangle within which to search</param>
         /// <param name="_image_file_path_in_images_directory">The path to the image file; this file must be in either 24bppRgb or 32bppArgb format</param>
         /// <param name="_only_search_for_first_occurrence">Uses the FindFirstImageInImage() and FindFirstWordInImage() functions respectively</param>
-        public MatchTemplate(ImageDetector _image_detector, OCR.OCR _ocr, Rectangle _default_region_of_interest, string _image_file_path_in_images_directory, bool _only_search_for_first_occurrence)
+        public MatchTemplate(MacroEngine _macro_engine, Rectangle _default_region_of_interest, string _image_file_path_in_images_directory, bool _only_search_for_first_occurrence, string _dictionary_key)
         {
-            Image_Detector = _image_detector;
-            ImagePathInImageDirectory = (_image_detector.GetImageDirectory() + "\\" + _image_file_path_in_images_directory).Replace("/", "\\");
+            Image_Detector = _macro_engine.GetImageDetector();
+            ImagePathInImageDirectory = (Image_Detector.GetImageDirectory() + "\\" + _image_file_path_in_images_directory).Replace("/", "\\");
             SearchForBitmap = new Bitmap(ImagePathInImageDirectory);
             SearchForImageBytes = ImageProcessor.BmpToByteArray_24bpp(SearchForBitmap);
             RegionsOfInterestList = new();
             RegionsOfInterestList.Add(_default_region_of_interest);
-            OpticalCharacterRecognition = _ocr;
+            OpticalCharacterRecognition = _macro_engine.GetOCR();
             Conditions = null;
             OnlySearchForFirstOccurrence = _only_search_for_first_occurrence;
+            DictionaryKey = _dictionary_key;
+            CycleCheck_Visited = false;
+            ActionRectangle = new Rectangle(0, 0, SearchForBitmap.Width, SearchForBitmap.Height);
         }
 
         /// <summary>
@@ -40,16 +44,19 @@ namespace macro.Net.Templates
         /// <param name="_default_region_of_interest">The rectangle within which to search</param>
         /// <param name="_image_file_path_in_images_directory">The path to the image file; this file must be in either 24bppRgb or 32bppArgb format</param>
         /// <param name="_only_search_for_first_occurrence">Uses the FindFirstImageInImage() and FindFirstWordInImage() functions respectively</param>
-        public MatchTemplate(ImageDetector _image_detector, OCR.OCR _ocr, string _image_file_path_in_images_directory, bool _only_search_for_first_occurrence)
+        public MatchTemplate(MacroEngine _macro_engine, string _image_file_path_in_images_directory, bool _only_search_for_first_occurrence, string _dictionary_key)
         {
-            Image_Detector = _image_detector;
-            ImagePathInImageDirectory = (_image_detector.GetImageDirectory() + "\\" + _image_file_path_in_images_directory).Replace("/", "\\");
+            Image_Detector = _macro_engine.GetImageDetector();
+            ImagePathInImageDirectory = (Image_Detector.GetImageDirectory() + "\\" + _image_file_path_in_images_directory).Replace("/", "\\");
             SearchForBitmap = new Bitmap(ImagePathInImageDirectory);
             SearchForImageBytes = ImageProcessor.BmpToByteArray_24bpp(SearchForBitmap);
-            RegionsOfInterestList.Add(new Rectangle(0, 0, _image_detector.GetScreenShotService().GetScreenWidth(), _image_detector.GetScreenShotService().GetScreenHeight()));
-            OpticalCharacterRecognition = _ocr;
+            RegionsOfInterestList.Add(new Rectangle(0, 0, Image_Detector.GetScreenShotService().GetScreenWidth(), Image_Detector.GetScreenShotService().GetScreenHeight()));
+            OpticalCharacterRecognition = _macro_engine.GetOCR();
             Conditions = null;
             OnlySearchForFirstOccurrence = _only_search_for_first_occurrence;
+            DictionaryKey = _dictionary_key;
+            CycleCheck_Visited = false;
+            ActionRectangle = new Rectangle(0, 0, SearchForBitmap.Width, SearchForBitmap.Height);
         }
 
         /// <summary>
@@ -64,21 +71,23 @@ namespace macro.Net.Templates
         /// <param name="_string_comparison_type">The string comparison method used to compare words found by Tesseract OCR with the _word_to_search</param>
         /// /// <param name="_only_search_for_first_occurrence">Uses the FindFirstImageInImage() and FindFirstWordInImage() functions respectively</param>
         /// <exception cref="ArgumentException"></exception>
-        public MatchTemplate(ImageDetector _image_detector, OCR.OCR _ocr, Rectangle _default_region_of_interest, string _word_to_match, StringComparison _string_comparison_type, bool _only_search_for_first_occurrence)
+        public MatchTemplate(MacroEngine _macro_engine, Rectangle _default_region_of_interest, string _word_to_match, StringComparison _string_comparison_type, bool _only_search_for_first_occurrence, string _dictionary_key)
         {
             if(SearchForWord == "")
             {
                 throw new ArgumentException("_word_to_match must not be empty!");
             }
 
-            Image_Detector = _image_detector;
+            Image_Detector = _macro_engine.GetImageDetector();
             RegionsOfInterestList = new();
             RegionsOfInterestList.Add(_default_region_of_interest);
-            OpticalCharacterRecognition = _ocr;
+            OpticalCharacterRecognition = _macro_engine.GetOCR();
             Conditions = null;
             SearchForWord = _word_to_match;
             StringComparisonMethod = _string_comparison_type;
             OnlySearchForFirstOccurrence = _only_search_for_first_occurrence;
+            DictionaryKey = _dictionary_key;
+            CycleCheck_Visited = false;
         }
 
         public async Task<bool> Test()
@@ -87,11 +96,18 @@ namespace macro.Net.Templates
             {
                 foreach(Rectangle region_of_interest in RegionsOfInterestList)
                 {
-                    if(OnlySearchForFirstOccurrence)
+                    if (this.Condition_Default_Offset.IsEmpty) // this is not a condition - update SearchInImageBytes. If this was a condition, these bytes have already been imported
                     {
-                        ImageMatch imgmatch = Image_Detector.FindFirstImageOnScreenArea(region_of_interest, SearchForImageBytes, SearchForBitmap.Width, SearchForBitmap.Height, 5);
+                        SearchInImageBytes = Image_Detector.GetScreenShotService().GetScreenAreaAsBmpByteArray_24bppRgb(region_of_interest);
+                    }
+
+                    if (OnlySearchForFirstOccurrence)
+                    {
+                        ImageMatch imgmatch = Image_Detector.FindFirstImageInImage(SearchInImageBytes, region_of_interest, SearchForImageBytes, SearchForBitmap.Width, SearchForBitmap.Height, 5); ;
                         if (imgmatch != null)
                         {
+                            Rectangle img_match_rect = imgmatch.GetRectangle();
+                            imgmatch.ActionRectangle = ImageProcessor.CropRectangleToScreenBoundaries(new Rectangle(img_match_rect.X + ActionRectangle.X, img_match_rect.Y + ActionRectangle.Y, ActionRectangle.Width, ActionRectangle.Height));
                             if (Conditions == null)
                             {
                                 ImageMatches = new();
@@ -108,7 +124,7 @@ namespace macro.Net.Templates
                             {
                                 foreach (MatchTemplate condition in Conditions)
                                 {
-                                    condition.ImportFromParent(this, imgmatch, null);
+                                    condition.ImportFromParent(this, imgmatch, null, region_of_interest);
                                     if(!await condition.Test())
                                     {
                                         goto location_end_of_imagesearch_loop; // condition not satisfied, skip this match
@@ -138,9 +154,19 @@ namespace macro.Net.Templates
                 {
                     if (OnlySearchForFirstOccurrence)
                     {
-                        TextMatch txtmatch = await OpticalCharacterRecognition.GetFirstWordFromScreenArea(region_of_interest, SearchForWord, StringComparisonMethod);
+                        TextMatch txtmatch = await OpticalCharacterRecognition.GetFirstWordFromScreenAreaBytes(SearchInImageBytes, region_of_interest, SearchForWord, StringComparisonMethod);
                         if (txtmatch != null)
                         {
+                            Rectangle textmatch_rect = txtmatch.MatchRect;
+                            if(ActionRectangle.IsEmpty) // by default, click on the bounding box that Tesseract specified
+                            {
+                                txtmatch.ActionRectangle = textmatch_rect;
+                            }
+                            else // or if an ActionRectangle inside that bounding box is specified, click on that one.
+                            {
+                                txtmatch.ActionRectangle = ImageProcessor.CropRectangleToScreenBoundaries(new Rectangle(textmatch_rect.X + ActionRectangle.X, textmatch_rect.Y + ActionRectangle.Y, ActionRectangle.Width, ActionRectangle.Height));
+                            }
+
                             if (Conditions == null)
                             {
                                 TextMatches = new();
@@ -157,7 +183,7 @@ namespace macro.Net.Templates
                             {
                                 foreach (MatchTemplate condition in Conditions)
                                 {
-                                    condition.ImportFromParent(this, null, txtmatch);
+                                    condition.ImportFromParent(this, null, txtmatch, region_of_interest);
                                     if (!await condition.Test())
                                     {
                                         goto location_end_of_wordsearch_loop; // condition not satisfied, skip this match
@@ -183,13 +209,38 @@ namespace macro.Net.Templates
             else
             {
                 throw new ArgumentException("This is neither a valid image-match nor a text-match template");
-            }
+                return false;
 
-            return false;
+            }
         }
 
-        public void ImportFromParent(MatchTemplate parent, ImageMatch imgMatch, TextMatch txtMatch)
+        public void SetActionRectangle(Rectangle rect)
         {
+            if(SearchForImageBytes != null) // this is an ImageMatch
+            {
+                ActionRectangle = rect;
+            }
+            else if (SearchForWord != "")
+            {
+                ActionRectangle = rect;
+            }
+            else
+            {
+                throw new InvalidOperationException("This was neither a Image- nor a Text-Match!");
+            }
+        }
+
+        /// <summary>
+        /// Configures the Condition and its region of interest according to the Match it depends on
+        /// Called by the Condition itself.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="imgMatch"></param>
+        /// <param name="txtMatch"></param>
+        /// <exception cref="InvalidOperationException"></exception>
+        public void ImportFromParent(MatchTemplate parent, ImageMatch imgMatch, TextMatch txtMatch, Rectangle current_roi)
+        {
+            this.SearchInImageBytes = parent.SearchInImageBytes;
             Rectangle parentPosition;
             if(imgMatch != null)
             {
@@ -204,47 +255,14 @@ namespace macro.Net.Templates
                 throw new InvalidOperationException("Attempted to process child conditions when parent's matches were both null");
             }
 
-            int screen_width = Image_Detector.GetScreenShotService().GetScreenWidth();
-            int screen_height = Image_Detector.GetScreenShotService().GetScreenHeight();
-
-            int max_permissible_width = screen_width - parentPosition.X - 1;
-            int max_permissible_height = screen_height - parentPosition.Y - 1;
-
-            int width = this.Default_Width;
-            int height = this.Default_Height;
-
-            if(Default_dX + width > max_permissible_width)
-            {
-                width = max_permissible_width;
-            }
-
-            if(Default_dY + height > max_permissible_height)
-            {
-                height = max_permissible_height;
-            }
-
-            int roi_X = parentPosition.X + Default_dX;
-            int roi_Y = parentPosition.Y + Default_dY;
-
-            if(roi_X > screen_width - 1)
-            {
-                roi_X = screen_width - width - 1;
-            }
-            else if (roi_X < 0) {
-                roi_X = 0;
-            }
-
-            if (roi_Y > height - 1)
-            {
-                roi_Y = screen_height - height - 1;
-            }
-            else if (roi_X < 0)
-            {
-                roi_Y = 0;
-            }
-
+            int roi_width = this.Condition_Default_Offset.Width;
+            int roi_height = this.Condition_Default_Offset.Height;
+            int roi_X = parentPosition.X + this.Condition_Default_Offset.X;
+            int roi_Y = parentPosition.Y + this.Condition_Default_Offset.Y;
+            Rectangle uncropped_roi = new(roi_X, roi_Y, roi_width, roi_height);
+            Rectangle cropped_roi = ImageProcessor.CropRectangleToRectangle(uncropped_roi, current_roi);
             this.RegionsOfInterestList = new();
-            this.RegionsOfInterestList.Add(new Rectangle(parentPosition.X + Default_dX, parentPosition.Y + Default_dY, width, height));
+            this.RegionsOfInterestList.Add(cropped_roi);
         }
 
         private ImageDetector Image_Detector { get; set; }
@@ -256,6 +274,8 @@ namespace macro.Net.Templates
         private Bitmap SearchForBitmap { get; set; }
 
         private byte[] SearchForImageBytes { get; set; }
+
+        private byte[] SearchInImageBytes { get; set; } // size is stored in the region-of-interest
 
         public List<ImageMatch> ImageMatches { get; set; }
 
@@ -269,6 +289,11 @@ namespace macro.Net.Templates
 
         public List<Rectangle> RegionsOfInterestList { get; set; }
 
+        /// <summary>
+        /// The rectangle (relative to the match-rectangle) on which to perform an action (with an ActionTemplate), such as a mouse click
+        /// </summary>
+        public Rectangle ActionRectangle { get; set; }
+
         private bool OnlySearchForFirstOccurrence { get; set; }
 
         /// <summary>
@@ -276,13 +301,28 @@ namespace macro.Net.Templates
         /// </summary>
         private int ConsecutiveFailedPasses { get; set; }
 
+        /// <summary>
+        /// A condition MatchTemplate may be offset from the initial match by a certain amount.
+        /// This rectangle describes the relative position of this rectangle in relation to the initial match.
+        /// </summary>
+        private Rectangle Condition_Default_Offset { get; set; }
 
-        private int Default_dX { get; set; }
+        private ActionTemplate ChildAction { get; set; }
 
-        private int Default_dY { get; set; }
+        private string DictionaryKey { get; set; }
 
-        private int Default_Height { get; set; }
+        public string GetDictionaryKey () { return DictionaryKey; }
 
-        private int Default_Width { get; set; }
+        public bool CycleCheck_Visited { get; set; }
+
+        public void SetChildAction(ActionTemplate action_template)
+        {
+            ChildAction = action_template;
+        }
+
+        public ActionTemplate GetChildAction()
+        {
+            return ChildAction;
+        }
     }
 }

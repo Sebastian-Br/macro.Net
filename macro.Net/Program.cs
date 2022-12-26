@@ -1,52 +1,37 @@
-﻿using macro.Net.ImageDetection;
+﻿using macro.Net.Engine;
+using macro.Net.ImageDetection;
 using macro.Net.ImageProcessing;
+using macro.Net.Math;
 using macro.Net.OCR;
 using macro.Net.Screen;
+using macro.Net.Templates;
 using System.Diagnostics;
+using System.Drawing.Text;
 
 using (Process proc = Process.GetCurrentProcess())
     proc.PriorityClass = ProcessPriorityClass.High;
 
-ScreenShotService screenShotService = new(80);
-OCR ocr = new("tessdata", 4, screenShotService);
-Console.WriteLine("finished loading tessData");
-ImageDetector imageDetector = new(screenShotService, "IMAGES");
-await Task.Delay(2000);
 
-Stopwatch s = new();
-s.Start();
-TextMatch m = await ocr.GetFirstWordFromFullScreenTiles("await", StringComparison.InvariantCultureIgnoreCase);
-s.Stop();
-Console.WriteLine("Textmatch time elapsed: " + s.ElapsedMilliseconds);
-Paint p = new(0.45, 7000);
-if(m != null)
-{
-    p.DrawContainingRectangle(m.MatchRect);
-}
-else { Console.WriteLine("await not found!"); }
+ClickWin10HomeButton().ExecuteGraph();
 
-Console.WriteLine("2");
-
-byte[] winFile = screenShotService.DbgGetFileAsByteArray_24BppArgb("IMAGES\\FFfromFS.JPG"); // pos on screen: 12, 1048
-byte[] screen = screenShotService.GetFullScreenAsBmpByteArray_24bppRgb();
-//byte[] screen = screenShotService.DbgGetFileAsByteArray_24BppArgb("IMAGES\\FullScreen.JPG");
-ImageProcessor IP = new();
-s.Restart();
-Rectangle? r = IP.FindFirstImageInImage_24bppRGB(screen, 1920, 1080, winFile, 26, 24, 0);
-s.Stop();
-Console.WriteLine("ImageMatch time elapsed: " + s.ElapsedMilliseconds);
-if (r != null)
-{
-    p.DrawContainingRectangle(r.Value);
-}
-else
-{
-    Console.WriteLine("Image not found!");
-}
-
-Console.WriteLine("3");
-
+Console.WriteLine("EOF");
 while (true)
 {
     await Task.Delay(10000);
+}
+
+MacroEngine ClickWin10HomeButton()
+{
+    MacroEngine m = new("tessdata", "IMAGES", true);
+    Rectangle default_roi_screen = new Rectangle(0, 0, 1920, 1080);
+
+    ActionTemplate root = new(900, 500);
+    m.SetRootActionTemplate(root);
+    MatchTemplate WinHomeButton = new(m, default_roi_screen, "Win10HfromFS.JPG", true, "WinHomeButton");
+    m.AddMatchTemplate(WinHomeButton);
+    ActionTemplate move_mouse_to_winhomebutton = new(ActionTemplate.MouseEvent.MoveMouse, "WinHomeButton");
+    m.AddActionTemplate(move_mouse_to_winhomebutton);
+    ActionTemplate clickLMB = new(ActionTemplate.MouseEvent.SingleClickLeftMouseButton, "");
+    m.AddActionTemplate(clickLMB);
+    return m;
 }

@@ -6,17 +6,21 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using macro.Net.Math;
+using macro.Net.DebugPrint;
+using System.Security.Cryptography;
 
 namespace macro.Net.InputSimulationService
 {
     public class Mouse
     {
-        public Mouse()
+        public Mouse(Rand _rng, bool _debug)
         {
             rd = new Random();
             ScreenWidthMinus1 = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width - 1;
             ScreenHeightMinus1 = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height - 1;
             point_for_MouseMoveSimple = new();
+            Debug = _debug;
+            RNG = _rng;
         }
 
         [DllImport("User32.Dll")]
@@ -26,10 +30,14 @@ namespace macro.Net.InputSimulationService
 
         private static Random rd;
 
+        private Rand RNG { get; set; }
+
         private POINT point_for_MouseMoveSimple;
 
         private int ScreenWidthMinus1 { get; set; }
         private int ScreenHeightMinus1 { get; set; }
+
+        private bool Debug { get; set; }
 
         public void MouseMoveSimple(int x, int y)
         {
@@ -79,7 +87,7 @@ namespace macro.Net.InputSimulationService
             GetCursorPos(ref point_for_MouseMoveSimple);
             if (VMath.isInCircle(X, Y, point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y, 4))
             {
-                dbg("MouseMoveSimple() - Reached target!");
+                Dbg.Print("MouseMoveSimple() - Reached target!", Debug);
                 SmartWait(timeMsLeft - 1);
                 return;
             }
@@ -89,11 +97,11 @@ namespace macro.Net.InputSimulationService
                 timeMsLeft = 1;
             double pxSpeedMin = px_distance / timeMsLeft;
             //dbg("MouseMove2(): Chose minspeed: " + pxSpeedMin + " [px/ms]");
-            int movementDuration = rd.Next(1, 4); //TODO: this is not normally distributed.
+            int movementDuration = RNG.GetStandardRand(2, 0.75, 1, 3); // using GetStandardRand(2, 0.75, 1, 3) yields 2:50%, 1/3:25%
             if (timeMsLeft > 97 + rd.Next(-6, 18) && rd.Next(0, 99) == 8)
             {
-                movementDuration = 3 + rd.Next(1, 18); // micro-wait.
-                dbg("MicroWait!");
+                movementDuration = 3 + RNG.GetStandardRand(9, 4, 1, 18); // micro-wait.
+                Dbg.Print("MicroWait!", Debug);
                 goto loc_wait;
             }
             //dbg("MouseMove2(): Chose movementDuration: " + movementDuration);
@@ -104,8 +112,8 @@ namespace macro.Net.InputSimulationService
             int radiusAroundTarget = px_distance - pxMovement;
             double angle = VMath.GetAngle(point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y, X, Y);
             //dbg("MouseMove2(): Actual Angle: " + angle);
-            CheckLastDevAngle(ref lastDevAngle);
-            double angleDeviation = (2 * rd.Next(-1, 2)) * rd.NextDouble() + lastDevAngle; // 15 deg target
+            lastDevAngle = CheckLastDevAngle(lastDevAngle);
+            double angleDeviation = (2 * rd.Next(-1, 2)) * RNG.GetNextDouble() + lastDevAngle; // +-18 deg
             lastDevAngle = angleDeviation;
             angle += angleDeviation;
             //dbg("MouseMove2(): Movement Angle: " + angle);
@@ -147,19 +155,17 @@ namespace macro.Net.InputSimulationService
         /// <summary>
         /// Checks the angle by which the last movement deviated from the ideal, shortest path.
         /// This angle should not be too large, and should not change discontinuously.
-        /// TODO: This function is slightly bugged, the value can be changed twice if it is == 0.
         /// </summary>
         /// <param name="lastDevAngle"></param>
-        private static void CheckLastDevAngle(ref double lastDevAngle)
+        private double CheckLastDevAngle(double lastDevAngle)
         {
-            if (lastDevAngle == 0)
-                lastDevAngle = rd.NextDouble() - 0.5;
-            if (lastDevAngle > 13)
-                lastDevAngle = 13.0;
-            if (lastDevAngle < -13)
-                lastDevAngle = -13.0;
-            if (rd.Next(0, 2) == 1) // change only 50% of the time
-                lastDevAngle += 2 * rd.NextDouble() - 1.0; // +-1 deg change per move
+            double new_deviation_angle = 0;
+            if (lastDevAngle > 16)
+                new_deviation_angle = 16;
+            else if (lastDevAngle < -16)
+                new_deviation_angle = -16;
+
+            return new_deviation_angle;
         }
 
         /// <summary>
@@ -169,7 +175,10 @@ namespace macro.Net.InputSimulationService
         /// <returns>The time in milliseconds that the movement should take.</returns>
         private int findTimeToTargetMs(int pxDistance)
         {
-            int ret = 2 + rd.Next(0, 3) + rd.Next(1, pxDistance % 31 + pxDistance / 7) + (int)((double)pxDistance / 2.71);
+            double divisor = 2.4;
+            int divisor_rand_seed = RNG.GetStandardRand(5, 3, 0, 10);
+            divisor += ((double)divisor_rand_seed) * 0.1d;
+            int ret = 2 + rd.Next(0, 3) + rd.Next(1, pxDistance % 31 + pxDistance / 7) + (int)((double)pxDistance / divisor);
             return ret;
         }
 
@@ -230,12 +239,6 @@ namespace macro.Net.InputSimulationService
                 System.Threading.Thread.SpinWait(4);
             }
             watch.Stop();
-            //dbg("@EOL: " + watch.ElapsedMilliseconds);
-        }
-
-        private static void dbg(string s)
-        {
-            Console.WriteLine(s);
         }
     }
 }

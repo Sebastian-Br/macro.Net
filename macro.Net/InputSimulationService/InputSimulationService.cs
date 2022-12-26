@@ -1,4 +1,5 @@
-﻿using System;
+﻿using macro.Net.Math;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,9 +10,9 @@ namespace macro.Net.InputSimulationService
 {
     public class InputSimulationService
     {
-        public InputSimulationService()
+        public InputSimulationService(Rand _rng, bool _debug)
         {
-            Mouse = new();
+            Mouse = new(_rng, _debug);
             Keyboard = new();
         } 
         public void MoveMouseToPosition(int x, int y)
@@ -32,7 +33,26 @@ namespace macro.Net.InputSimulationService
             {
                 Keyboard.Keyboard.TextEntry(c);
             }
+        }
 
+        public async void ClickLeftMouseButton()
+        {
+            Keyboard.Mouse.LeftButtonClick();
+        }
+
+        public async void ClickRightMouseButton()
+        {
+            Keyboard.Mouse.RightButtonClick();
+        }
+
+        public async void ScrollDownOnce()
+        {
+            Keyboard.Mouse.VerticalScroll(-1);
+        }
+
+        public async void ScrollUpOnce()
+        {
+            Keyboard.Mouse.VerticalScroll(1);
         }
 
         private Mouse Mouse { get; set; }

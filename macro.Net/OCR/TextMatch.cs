@@ -44,6 +44,12 @@ namespace macro.Net.OCR
 
         public StringComparison NativeComparisonMethod { get; set; }
 
+        /// <summary>
+        /// The Rectangle that is used when issuing an Action via an ActionTemplate, such as a mouse click.
+        /// A random point within this rectangle is chosen.
+        /// </summary>
+        public Rectangle ActionRectangle { get; set; }
+
         // idea: develop a 'coarse' comparison method that matches strings even when some characters are missing or misidentified
     }
 

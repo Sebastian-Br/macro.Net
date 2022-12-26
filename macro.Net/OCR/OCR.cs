@@ -7,12 +7,13 @@ using Tesseract;
 using macro.Net.Screen;
 using System.Diagnostics;
 using macro.Net.ImageProcessing;
+using macro.Net.DebugPrint;
 
 namespace macro.Net.OCR
 {
     public class OCR
     {
-        public OCR(string tessdata_dir, int _n_tiles_on_screen, ScreenShotService sssvc)
+        public OCR(string tessdata_dir, int _n_tiles_on_screen, ScreenShotService sssvc, bool debug)
         {
             tessEngines = new();
             n_tiles_on_screen = _n_tiles_on_screen;
@@ -26,6 +27,7 @@ namespace macro.Net.OCR
             }
 
             ScreenShotSvc = sssvc;
+            Debug = debug;
         }
 
         public List<TesseractEngine> tessEngines { get; set; }
@@ -34,7 +36,9 @@ namespace macro.Net.OCR
 
         private ScreenShotService ScreenShotSvc { get; set; }
 
-        public async Task<TextMatch> GetFirstWordFromFullScreenTiles(string wordToMatch, StringComparison stringComparison)
+        private bool Debug { get; set; }
+
+        private async Task<TextMatch> GetFirstWordFromFullScreenTiles(string wordToMatch, StringComparison stringComparison)
         {
             List <ScreenImageTile> image_tiles = ScreenShotSvc.GetFullScreenAsBmpByteArray_SplitScreen(n_tiles_on_screen);
             int i = 0;
@@ -78,25 +82,24 @@ namespace macro.Net.OCR
         /// <param name="wordToMatch">The word to match</param>
         /// <param name="stringComparison">The string comparison method used to compare results from </param>
         /// <returns></returns>
-        public async Task<TextMatch> GetFirstWordFromScreenArea(Rectangle area, string wordToMatch, StringComparison stringComparison)
+        public async Task<TextMatch> GetFirstWordFromScreenAreaBytes(byte[] area_bytes, Rectangle area, string wordToMatch, StringComparison stringComparison)
         {
-            if(area.Width == System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width && area.Height == System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height)
+            if (area.Width == System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width && area.Height == System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height)
             {
                 return await GetFirstWordFromFullScreenTiles(wordToMatch, stringComparison);
             }
             TesseractEngine engine = tessEngines.First();
-            byte[] area_bytes = ScreenShotSvc.GetScreenAreaAsBmpByteArray_24bppRgb(area);
             string current_word_to_match = wordToMatch; // nice-to-have: if the full word is not found, search for sub-strings
             Pix img = Pix.LoadFromMemory(area_bytes);
             Page page = engine.Process(img);
             Stopwatch clock = new(); clock.Start();
             ResultIterator iter = page.GetIterator();
             clock.Stop();
-            Console.WriteLine("GetFirstWordFromScreenArea() GetIterator exec time: " + clock.ElapsedMilliseconds);
+            Dbg.Print("GetFirstWordFromScreenArea() GetIterator exec time: " + clock.ElapsedMilliseconds, Debug);
             TextMatch match = GetSingleTextMatchFromPage(iter, current_word_to_match, wordToMatch, stringComparison);
             page.Dispose();
 
-            if(match != null)
+            if (match != null)
             {
                 match.MatchRect = new(match.MatchRect.X + area.X, match.MatchRect.Y + area.Y, match.MatchRect.Width, match.MatchRect.Height); // recalculate the position
                 return match;
@@ -118,7 +121,7 @@ namespace macro.Net.OCR
             Stopwatch clock = new(); clock.Start();
             ResultIterator iter = page.GetIterator();
             clock.Stop();
-            Console.WriteLine("GetFirstWordPosition() GetIterator exec time: " + clock.ElapsedMilliseconds);
+            Dbg.Print("GetFirstWordPosition() GetIterator exec time: " + clock.ElapsedMilliseconds, Debug);
             string currentWordToMatch = wordToMatch;
             TextMatch match = GetSingleTextMatchFromPage(iter, currentWordToMatch, wordToMatch, stringComparisonType);
             page.Dispose();
