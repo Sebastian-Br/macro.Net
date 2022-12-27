@@ -1,4 +1,5 @@
-﻿using macro.Net.ImageProcessing;
+﻿using macro.Net.DebugPrint;
+using macro.Net.ImageProcessing;
 using macro.Net.Screen;
 using System;
 using System.Collections.Generic;
@@ -18,16 +19,19 @@ namespace macro.Net.ImageDetection
 
         private string ImageDirectory { get; set; }
 
+        private bool Debug { get; set; }
+
         /// <summary>
         /// The screenrecorder instance is supposed to be shared between the ImageDetector and OCR classes.
         /// </summary>
         /// <param name="_screenRecorder">The screenrecorder </param>
         /// <param name="_image_directory">The directory whence images are loaded to be matched</param>
-        public ImageDetector(ScreenShotService _screenRecorder, string _image_directory)
+        public ImageDetector(ScreenShotService _screenRecorder, string _image_directory, bool debug)
         {
             Screenshot_Service = _screenRecorder;
             ImageDirectory = _image_directory.Replace("/", "\\");
             ImageProcessor = new();
+            Debug = debug;
         }
 
         /// <summary>
@@ -77,7 +81,7 @@ namespace macro.Net.ImageDetection
         {
             try
             {
-                
+                Stopwatch s = new(); s.Start();
                 byte[] search_in_bytes = searchIn;
                 byte[] searchForBmpBytes = searchFor;
                 Rectangle? r = ImageProcessor.FindFirstImageInImage_24bppRGB(
@@ -87,6 +91,8 @@ namespace macro.Net.ImageDetection
                 {
                     Rectangle result_rectangle = new(r.Value.X + search_in_rect.X, r.Value.Y + search_in_rect.Y, r.Value.Width, r.Value.Height);
                     ImageMatch match = new(result_rectangle);
+                    s.Stop();
+                    Dbg.Print("Found image in " + s.ElapsedMilliseconds + " ms", Debug);
                     return match;
                 }
             }

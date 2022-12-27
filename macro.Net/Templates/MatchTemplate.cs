@@ -34,6 +34,7 @@ namespace macro.Net.Templates
             DictionaryKey = _dictionary_key;
             CycleCheck_Visited = false;
             ActionRectangle = new Rectangle(0, 0, SearchForBitmap.Width, SearchForBitmap.Height);
+            FileName = _image_file_path_in_images_directory;
         }
 
         /// <summary>
@@ -50,6 +51,7 @@ namespace macro.Net.Templates
             ImagePathInImageDirectory = (Image_Detector.GetImageDirectory() + "\\" + _image_file_path_in_images_directory).Replace("/", "\\");
             SearchForBitmap = new Bitmap(ImagePathInImageDirectory);
             SearchForImageBytes = ImageProcessor.BmpToByteArray_24bpp(SearchForBitmap);
+            RegionsOfInterestList = new();
             RegionsOfInterestList.Add(new Rectangle(0, 0, Image_Detector.GetScreenShotService().GetScreenWidth(), Image_Detector.GetScreenShotService().GetScreenHeight()));
             OpticalCharacterRecognition = _macro_engine.GetOCR();
             Conditions = null;
@@ -57,6 +59,7 @@ namespace macro.Net.Templates
             DictionaryKey = _dictionary_key;
             CycleCheck_Visited = false;
             ActionRectangle = new Rectangle(0, 0, SearchForBitmap.Width, SearchForBitmap.Height);
+            FileName = _image_file_path_in_images_directory;
         }
 
         /// <summary>
@@ -279,7 +282,7 @@ namespace macro.Net.Templates
 
         public List<ImageMatch> ImageMatches { get; set; }
 
-        private string SearchForWord { get; set; }
+        public string SearchForWord { get; set; }
 
         private StringComparison StringComparisonMethod { get; set; }
 
@@ -314,6 +317,8 @@ namespace macro.Net.Templates
         public string GetDictionaryKey () { return DictionaryKey; }
 
         public bool CycleCheck_Visited { get; set; }
+
+        public string FileName { get; set; }
 
         public void SetChildAction(ActionTemplate action_template)
         {

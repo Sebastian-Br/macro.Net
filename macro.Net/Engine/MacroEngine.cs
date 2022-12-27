@@ -21,7 +21,7 @@ namespace macro.Net.Engine
             RNG = new();
             ScreenShotSvc = new(80);
             OpticalCharacterRecognition = new(_tessdata_dir, 4, ScreenShotSvc, _debug);
-            Image_Detector = new(ScreenShotSvc, _image_dir);
+            Image_Detector = new(ScreenShotSvc, _image_dir, _debug);
             InputSim = new(RNG, _debug);
             AllActionTemplates = new();
             AllMatchTemplates= new();
@@ -75,6 +75,8 @@ namespace macro.Net.Engine
 
         private void AddOrUpdateActionRectanglesOfMatchTemplateInDictionary(MatchTemplate m)
         {
+            if (m.GetDictionaryKey() == "")
+                return;
             if(m.ImageMatches != null)
             {
                 if(m.ImageMatches.Count > 0)
@@ -187,7 +189,7 @@ namespace macro.Net.Engine
             }
         }
 
-        private void ExecuteAction(ActionTemplate action_template)
+        private async Task ExecuteAction(ActionTemplate action_template)
         {
             if(action_template.GetKeyboardInput() != null)
             {
@@ -260,6 +262,43 @@ namespace macro.Net.Engine
                     throw new NotImplementedException("Middle mouse button clicks are not supported as of yet");
                 }
             }
+            else if (action_template.GetWaitEvent() != 0)
+            {
+                ActionTemplate.WaitEvent wait_event = action_template.GetWaitEvent();
+                if(wait_event == ActionTemplate.WaitEvent.SimplyWait)
+                {
+                    await action_template.Wait();
+                }
+                else if (wait_event == ActionTemplate.WaitEvent.WaitAndDoodle)
+                {
+                    throw new NotImplementedException("WaitAndDoodle is not yet implemented!");
+                }
+                else if (wait_event == ActionTemplate.WaitEvent.WaitForUserToHelp)
+                {
+                    if(action_template.UserHelpMessage_UseMsgBox)
+                    {
+                        MessageBox.Show(action_template.UserHelpMessage, "The Application requires your help!");
+                    }
+                    if(action_template.UserHelpMessage_UseTTS)
+                    {
+                        throw new NotImplementedException("Text-To-Speech is not yet implemented!");
+                    }
+
+                    while (true)
+                    {
+                        if(await action_template.UserHelpSuccessCondition.Test() == true)
+                        {
+                            break;
+                        }
+
+                        await Task.Delay(300);
+                    }
+                }
+                else
+                {
+                    throw new NotImplementedException("Invalid Wait Action!");
+                }
+            }
             else
             {
                 throw new InvalidEnumArgumentException("There was no Action associated with this ActionTemplate!");
@@ -281,11 +320,16 @@ namespace macro.Net.Engine
                         return;
                     }
 
+                    Dbg.Print("Attempting to Match " + CurrentMatchTemplate.FileName + " / MatchWord: " + CurrentMatchTemplate.SearchForWord, DebugMode);
                     bool match_success = await CurrentMatchTemplate.Test(); // a match is successful if one match was found
                     if(!match_success)
                     {
                         Console.WriteLine("CurrentMatchTemplate.Test(): False/Match was not found! Skipping to next MatchTemplate!");
-                        SkipToNextMatchTemplate();
+                        if (!SkipToNextMatchTemplate())
+                        {
+                            Console.WriteLine("No subsequent MatchTemplate has been found! Exiting");
+                            return;
+                        }
                         goto location_end_of_execute_graph_loop;
                     }
                     else
@@ -304,7 +348,7 @@ namespace macro.Net.Engine
                         return;
                     }
 
-                    ExecuteAction(CurrentActionTemplate);
+                    await ExecuteAction(CurrentActionTemplate);
 
                     if (CurrentActionTemplate.GetChildAction() != null)
                     {
@@ -313,11 +357,11 @@ namespace macro.Net.Engine
                     else if(CurrentActionTemplate.GetChildMatchTemplate() != null)
                     {
                         current_template_is_match_template = true;
-                        SetCurrentTemplate(RootActionTemplate.GetChildMatchTemplate());
+                        SetCurrentTemplate(CurrentActionTemplate.GetChildMatchTemplate());
                     }
                     else
                     {
-                        Console.WriteLine("Reached the end of the graph");
+                        Console.WriteLine("Reached the end of the graph (Action had no children)");
                         return;
                     }
                 }

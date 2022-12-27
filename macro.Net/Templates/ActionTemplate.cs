@@ -30,6 +30,10 @@ namespace macro.Net.Templates
 
         private MouseEvent Mouse_Click { get; set; }
 
+        private WaitEvent Wait_Event { get; set; }
+
+        private int WaitDurationMs { get; set; }
+
         private ActionTemplate ChildAction { get; set; }
 
         private MatchTemplate ChildMatchTemplate { get; set; }
@@ -41,6 +45,13 @@ namespace macro.Net.Templates
         public bool CycleCheck_Visited { get; set; }
 
         public string DictionaryKey { get; set; }
+
+        public string UserHelpMessage { get; set; }
+
+        public bool UserHelpMessage_UseMsgBox { get; set; }
+        public bool UserHelpMessage_UseTTS { get; set; }
+
+        public MatchTemplate UserHelpSuccessCondition { get; set; }
 
         public void SetChildAction(ActionTemplate _child_action)
         {
@@ -94,6 +105,28 @@ namespace macro.Net.Templates
             DictionaryKey = dictionaryKey;
         }
 
+        public ActionTemplate(WaitEvent wait_event, int wait_duration_ms)
+        {
+            Wait_Event = wait_event;
+            CycleCheck_Visited = false;
+            WaitDurationMs = wait_duration_ms;
+        }
+
+        /// <summary>
+        /// This constructor sets up an ActionTemplate to wait for the user to help the application.
+        /// </summary>
+        /// <param name="wait_user_help_msg"></param>
+        /// <param name="end_wait_condition"></param>
+        public ActionTemplate(string wait_user_help_msg, MatchTemplate end_wait_condition, bool userHelpMessage_UseMsgBox, bool userHelpMessage_UseTTS)
+        {
+            Wait_Event = WaitEvent.WaitForUserToHelp;
+            CycleCheck_Visited = false;
+            UserHelpMessage = wait_user_help_msg;
+            UserHelpSuccessCondition = end_wait_condition;
+            UserHelpMessage_UseMsgBox = userHelpMessage_UseMsgBox;
+            UserHelpMessage_UseTTS = userHelpMessage_UseTTS;
+        }
+
         public enum MouseEvent
         {
             SingleClickLeftMouseButton = 1,
@@ -101,6 +134,13 @@ namespace macro.Net.Templates
             SingleClickMiddleMouseButton = 3,
             MoveMouse = 4
         };
+
+        public enum WaitEvent
+        {
+            SimplyWait = 1,
+            WaitAndDoodle = 2, //TBD
+            WaitForUserToHelp = 3
+        }
 
         public string GetKeyboardInput()
         {
@@ -120,6 +160,15 @@ namespace macro.Net.Templates
         public MouseEvent GetMouseClick()
         {
             return Mouse_Click;
+        }
+        public WaitEvent GetWaitEvent()
+        {
+            return Wait_Event;
+        }
+
+        public async Task Wait()
+        {
+            await Task.Delay(WaitDurationMs);
         }
     }
 }
