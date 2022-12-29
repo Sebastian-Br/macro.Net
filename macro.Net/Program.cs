@@ -7,12 +7,25 @@ using macro.Net.Screen;
 using macro.Net.Templates;
 using System.Diagnostics;
 using System.Drawing.Text;
+using System.Speech.Synthesis;
 
 using (Process proc = Process.GetCurrentProcess())
     proc.PriorityClass = ProcessPriorityClass.High;
 
-await Task.Delay(4000);
-ClickGoogleRecaptcha_ByImage().ExecuteGraph();
+SpeechSynthesizer Speech_Synthesizer = new();
+Speech_Synthesizer.SetOutputToDefaultAudioDevice();
+Speech_Synthesizer.SelectVoice("Microsoft Zira Desktop");
+Speech_Synthesizer.SpeakAsync("Hello, Hello, Hello, Hello, Hello.");
+foreach (InstalledVoice voice in Speech_Synthesizer.GetInstalledVoices())
+{
+    VoiceInfo info = voice.VoiceInfo;
+    Console.WriteLine(" Voice Name: " + info.Name);
+    Console.WriteLine(" Voice Culture: " + info.Culture);
+    Console.WriteLine(" Voice Culture: " + info.Age);
+}
+/*await Task.Delay(3000);
+ClickGoogleRecaptcha_ByImage().ExecuteGraph();*/
+
 
 //Console.WriteLine("EOF");
 while (true)

@@ -8,6 +8,11 @@ namespace macro.Net.DebugPrint
 {
     public static class Dbg
     {
+        /// <summary>
+        /// Prints the message if debug is true
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="debug">The debug parameter</param>
         public static void Print(string message, bool debug)
         {
             if(debug)

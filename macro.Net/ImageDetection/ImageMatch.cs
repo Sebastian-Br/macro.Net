@@ -8,15 +8,15 @@ namespace macro.Net.ImageDetection
 {
     public class ImageMatch
     {
-        public ImageMatch(Rectangle _rectangle)
+        public ImageMatch(Rectangle _match_rectangle)
         {
-            rectangle = _rectangle;
+            MatchRectangle = _match_rectangle;
         }
 
         /// <summary>
         /// The rectangle that corresponds to the SearchFor image.
         /// </summary>
-        private Rectangle rectangle { get; set; }
+        private Rectangle MatchRectangle { get; set; }
 
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace macro.Net.ImageDetection
 
         public Rectangle GetRectangle()
         {
-            return rectangle;
+            return MatchRectangle;
         }
     }
 }

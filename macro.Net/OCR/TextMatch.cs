@@ -24,6 +24,7 @@ namespace macro.Net.OCR
 
         /// <summary>
         /// The text that was found
+        /// At the moment, this is always equal to the SearchText if a match was found
         /// </summary>
         public string MatchedText { get; set; }
 
@@ -32,16 +33,23 @@ namespace macro.Net.OCR
         /// </summary>
         public Rectangle MatchRect { get; set; }
 
+        /// <summary>
+        /// Converts the Tesseract.Rect structure to a Rectangle object and sets the MatchRect property accordingly
+        /// </summary>
+        /// <param name="rect"></param>
         public void SetMatchRect(Tesseract.Rect rect)
         {
-            Rectangle newRect = new();
-            newRect.X = rect.X1;
-            newRect.Y = rect.Y1;
-            newRect.Width = rect.Width;
-            newRect.Height = rect.Height;
-            MatchRect = newRect;
+            Rectangle match_rectangle = new();
+            match_rectangle.X = rect.X1;
+            match_rectangle.Y = rect.Y1;
+            match_rectangle.Width = rect.Width;
+            match_rectangle.Height = rect.Height;
+            MatchRect = match_rectangle;
         }
 
+        /// <summary>
+        /// The StringComparison method used to compare the results of the OCR with the SearchForWord
+        /// </summary>
         public StringComparison NativeComparisonMethod { get; set; }
 
         /// <summary>

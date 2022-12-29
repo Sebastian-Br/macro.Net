@@ -18,7 +18,7 @@ namespace macro.Net.InputSimulationService
             rd = new Random();
             ScreenWidthMinus1 = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width - 1;
             ScreenHeightMinus1 = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height - 1;
-            point_for_MouseMoveSimple = new();
+            point_cursor_position = new();
             Debug = _debug;
             RNG = _rng;
         }
@@ -32,18 +32,18 @@ namespace macro.Net.InputSimulationService
 
         private Rand RNG { get; set; }
 
-        private POINT point_for_MouseMoveSimple;
+        private POINT point_cursor_position;
 
         private int ScreenWidthMinus1 { get; set; }
         private int ScreenHeightMinus1 { get; set; }
 
         private bool Debug { get; set; }
 
-        public void MouseMoveSimple(int x, int y)
+        public void MouseMoveSimple(int target_x, int target_y)
         {
-            GetCursorPos(ref point_for_MouseMoveSimple);
-            int time_ms_left = findTimeToTargetMs(VMath.GetDistance(x, y, point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y));
-            MouseMoveSimple_Rec(x, y, time_ms_left, 0);
+            GetCursorPos(ref point_cursor_position);
+            int time_ms_left = findTimeToTargetMs(VMath.GetDistance(target_x, target_y, point_cursor_position.x, point_cursor_position.y));
+            MouseMoveSimple_Rec(target_x, target_y, time_ms_left, 0);
         }
 
         /// <summary>
@@ -78,50 +78,54 @@ namespace macro.Net.InputSimulationService
         /// The lastDevAngle gets passed to the next recursion to generate more fluent movement;
         /// a.k.a. this param changes only a bit per recursion.
         /// </summary>
-        /// <param name="X">The target X coordinate.</param>
-        /// <param name="Y">The target Y coordinate.</param>
-        /// <param name="timeMsLeft">The time, in Milliseconds, left to move the cursor to that location.</param>
-        /// <param name="lastDevAngle">The deviation in deg° from the shortest path of the previous call.</param>
-        private void MouseMoveSimple_Rec(int X, int Y, int timeMsLeft, double lastDevAngle)
+        /// <param name="target_x">The target X coordinate.</param>
+        /// <param name="target_Y">The target Y coordinate.</param>
+        /// <param name="time_ms_left">The time, in Milliseconds, left to move the cursor to that location.</param>
+        /// <param name="last_deviation_angle">The deviation in deg° from the shortest path of the previous call.</param>
+        private void MouseMoveSimple_Rec(int target_x, int target_Y, int time_ms_left, double last_deviation_angle)
         {
-            GetCursorPos(ref point_for_MouseMoveSimple);
-            if (VMath.isInCircle(X, Y, point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y, 4))
+            GetCursorPos(ref point_cursor_position);
+            if(VMath.IsInCircle(target_x, target_Y, point_cursor_position.x, point_cursor_position.y, 4))
             {
                 Dbg.Print("MouseMoveSimple() - Reached target!", Debug);
-                SmartWait(timeMsLeft - 1);
+                SmartWait(time_ms_left - 1);
                 return;
             }
             //dbg("MouseMove2(): @(" + p.x + "," + p.y + ")" + " aiming@(" + X + "," + Y +")");
-            int px_distance = VMath.GetDistance(X, Y, point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y);
-            if (timeMsLeft == 0) // prevent division by 0
-                timeMsLeft = 1;
-            double pxSpeedMin = px_distance / timeMsLeft;
+            int px_distance = VMath.GetDistance(target_x, target_Y, point_cursor_position.x, point_cursor_position.y);
+            if (time_ms_left == 0) // prevent division by 0
+                time_ms_left = 1;
+            double px_per_ms_speed_min = px_distance / time_ms_left; // the minimum speed required to get to the target in time
             //dbg("MouseMove2(): Chose minspeed: " + pxSpeedMin + " [px/ms]");
-            int movementDuration = RNG.GetStandardRand(2, 0.75, 1, 3); // using GetStandardRand(2, 0.75, 1, 3) yields 2:50%, 1/3:25%
-            if (timeMsLeft > 97 + rd.Next(-6, 18) && rd.Next(0, 99) == 8)
+            int movement_duration; 
+            if (time_ms_left > 97 + rd.Next(-6, 18) && rd.Next(0, 99) == 8)
             {
-                movementDuration = 3 + RNG.GetStandardRand(9, 4, 1, 18); // micro-wait.
+                movement_duration = 3 + RNG.GetStandardRand(9, 5, 1, 18); // micro-wait.
                 Dbg.Print("MicroWait!", Debug);
                 goto loc_wait;
             }
+            else
+            {
+                movement_duration = RNG.GetStandardRand(2, 0.75, 1, 3); // using GetStandardRand(2, 0.75, 1, 3) yields 2:50%, 1/3:25%
+            }
             //dbg("MouseMove2(): Chose movementDuration: " + movementDuration);
-            int pxMovement = movementDuration * (int)pxSpeedMin;
-            if (pxMovement == 0)
-                pxMovement = 1;
+            int movement_distance_px = movement_duration * (int)px_per_ms_speed_min;
+            if (movement_distance_px == 0)
+                movement_distance_px = 1;
             //dbg("MouseMove2(): Chose pxMovement: " + pxMovement);
-            int radiusAroundTarget = px_distance - pxMovement;
-            double angle = VMath.GetAngle(point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y, X, Y);
+            int radius_around_target = px_distance - movement_distance_px;
+            double angle = VMath.GetAngle(point_cursor_position.x, point_cursor_position.y, target_x, target_Y);
             //dbg("MouseMove2(): Actual Angle: " + angle);
-            lastDevAngle = CheckLastDevAngle(lastDevAngle);
-            double angleDeviation = (2 * rd.Next(-1, 2)) * RNG.GetNextDouble() + lastDevAngle; // +-18 deg
-            lastDevAngle = angleDeviation;
-            angle += angleDeviation;
+            last_deviation_angle = CheckLastDevAngle(last_deviation_angle);
+            double deviation_angle = (2 * rd.Next(-1, 2)) * RNG.GetNextDouble() + last_deviation_angle; // +-18 deg
+            last_deviation_angle = deviation_angle;
+            angle += deviation_angle;
             //dbg("MouseMove2(): Movement Angle: " + angle);
             //dbg("MouseMove2(): angleDeviation: " + angleDeviation);
             int newdx = 0; int newdy = 0;
-            if (radiusAroundTarget <= 4)
-                radiusAroundTarget = 4;
-            int pResult = paintLineToCircle(ref newdx, ref newdy, point_for_MouseMoveSimple.x, point_for_MouseMoveSimple.y, angle, X, Y, radiusAroundTarget);
+            if (radius_around_target <= 4)
+                radius_around_target = 4;
+            int pResult = PaintLineToCircle(ref newdx, ref newdy, point_cursor_position.x, point_cursor_position.y, angle, target_x, target_Y, radius_around_target);
             if (pResult == 1) // newdx was 0, thus newdx will be randomized to make the mouse jitter
             {
                 if (rd.Next(0, 3) == 0)
@@ -135,8 +139,8 @@ namespace macro.Net.InputSimulationService
             //dbg("Chose newdX " + newdx + " newdy " + newdy);
             MMove(newdx, newdy);
         loc_wait:
-            SmartWait(movementDuration);
-            MouseMoveSimple_Rec(X, Y, timeMsLeft - movementDuration, lastDevAngle);
+            SmartWait(movement_duration);
+            MouseMoveSimple_Rec(target_x, target_Y, time_ms_left - movement_duration, last_deviation_angle);
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -156,13 +160,13 @@ namespace macro.Net.InputSimulationService
         /// Checks the angle by which the last movement deviated from the ideal, shortest path.
         /// This angle should not be too large, and should not change discontinuously.
         /// </summary>
-        /// <param name="lastDevAngle"></param>
-        private double CheckLastDevAngle(double lastDevAngle)
+        /// <param name="last_deviation_angle">The last deviation angle</param>
+        private double CheckLastDevAngle(double last_deviation_angle)
         {
             double new_deviation_angle = 0;
-            if (lastDevAngle > 16)
+            if (last_deviation_angle > 16)
                 new_deviation_angle = 16;
-            else if (lastDevAngle < -16)
+            else if (last_deviation_angle < -16)
                 new_deviation_angle = -16;
 
             return new_deviation_angle;
@@ -185,37 +189,37 @@ namespace macro.Net.InputSimulationService
         /// <summary>
         /// Changes ref parameters newDx, newDy such that the mouse is moved closer to the next circle.
         /// </summary>
-        /// <param name="newDx"></param>
-        /// <param name="newDy"></param>
-        /// <param name="x">Current mouse position X</param>
-        /// <param name="y">Current mouse position Y</param>
-        /// <param name="angle"></param>
-        /// <param name="X">X coordinate of the circle</param>
-        /// <param name="Y">Y coordinate of the circle</param>
+        /// <param name="newDx">The change in the x direction</param>
+        /// <param name="newDy">The change in the y direction</param>
+        /// <param name="x_mouse">Current mouse position X</param>
+        /// <param name="y_mouse">Current mouse position Y</param>
+        /// <param name="angle">The angle from the current mouse position to the center of circle</param>
+        /// <param name="x_circle">X coordinate of the circle</param>
+        /// <param name="y_circle">Y coordinate of the circle</param>
         /// <param name="r">The radius of the circle</param>
-        /// <returns></returns>
-        private int paintLineToCircle(ref int newDx, ref int newDy, int x, int y, double angle, int X, int Y, int r)
+        /// <returns>2 if newDy would be 0. 1 if newDx would be 0. Returns 0 otherwise</returns>
+        private int PaintLineToCircle(ref int newDx, ref int newDy, int x_mouse, int y_mouse, double angle, int x_circle, int y_circle, int r)
         {
-            double slopeX = System.Math.Tan(angle / (((double)180 / System.Math.PI)));
-            double slopeY = System.Math.Tan((angle - 90.0) / (((double)180 / System.Math.PI)));
-            bool walkX = VMath.Abs(slopeX) <= VMath.Abs(slopeY);
-            while (!VMath.isInCircle(X, Y, x + newDx, y + newDy, r))
+            double slope_x = System.Math.Tan(angle / (((double)180 / System.Math.PI)));
+            double slope_y = System.Math.Tan((angle - 90.0) / (((double)180 / System.Math.PI)));
+            bool walkX = System.Math.Abs(slope_x) <= System.Math.Abs(slope_y);
+            while (!VMath.IsInCircle(x_circle, y_circle, x_mouse + newDx, y_mouse + newDy, r))
             {
                 if (walkX)
                 {
-                    if (x > X)
+                    if (x_mouse > x_circle)
                         newDx--;
                     else
                         newDx++;
-                    newDy = -(int)(((double)newDx) * slopeX);
+                    newDy = -(int)(((double)newDx) * slope_x);
                 }
                 else
                 {
-                    if (y < Y)
+                    if (y_mouse < y_circle)
                         newDy++;
                     else
                         newDy--;
-                    newDx = (int)(((double)newDy) * slopeY);
+                    newDx = (int)(((double)newDy) * slope_y);
                 }
             }
             if (newDy == 0)

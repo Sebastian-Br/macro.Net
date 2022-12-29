@@ -10,26 +10,53 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Speech.Synthesis;
 using macro.Net.DebugPrint;
 
 namespace macro.Net.Engine
 {
     public class MacroEngine
     {
+        /// <summary>
+        /// Constructs a new MacroEngine instance.
+        /// It can dynamically react to visuals on the screen and take actions such as moving the mouse, clicking, and entering keystrokes.
+        /// </summary>
+        /// <param name="_tessdata_dir">The directory where tesseract files are stored relative to the application directory</param>
+        /// <param name="_image_dir">The directory where images files are stored relative to the application directory</param>
+        /// <param name="_debug">Whether (true) or not (false) to print debug information</param>
         public MacroEngine(string _tessdata_dir, string _image_dir, bool _debug)
         {
             RNG = new();
-            ScreenShotSvc = new(80);
+            ScreenShotSvc = new(80, _debug);
             OpticalCharacterRecognition = new(_tessdata_dir, 4, ScreenShotSvc, _debug);
             Image_Detector = new(ScreenShotSvc, _image_dir, _debug);
             InputSim = new(RNG, _debug);
-            AllActionTemplates = new();
-            AllMatchTemplates= new();
-            ActionRegionsOfInterestDictionary = new();
             DebugMode = _debug;
+
+            Speech_Synthesizer = new();
+            Speech_Synthesizer.SetOutputToDefaultAudioDevice();
+            foreach (InstalledVoice voice in Speech_Synthesizer.GetInstalledVoices())
+            {
+                if(voice.VoiceInfo.Name == "Microsoft Zira Desktop")
+                {
+                    Speech_Synthesizer.SelectVoice("Microsoft Zira Desktop");
+                    break;
+                }
+            }
+
+            AllActionTemplates = new();
+            AllMatchTemplates = new();
+            ActionRegionsOfInterestDictionary = new();
         }
 
+        /// <summary>
+        /// Whether or not to print Debug messages
+        /// </summary>
         private bool DebugMode { get; set; }
+
+        /// <summary>
+        /// This class facilitates Optical Character Recognition
+        /// </summary>
         private OCR.OCR OpticalCharacterRecognition { get; set; }
 
         public OCR.OCR GetOCR()
@@ -37,8 +64,14 @@ namespace macro.Net.Engine
             return OpticalCharacterRecognition;
         }
 
+        /// <summary>
+        /// This class takes screenshots of areas on the screen for both the OCR and ImageDetector
+        /// </summary>
         private ScreenShotService ScreenShotSvc { get; set; }
 
+        /// <summary>
+        /// Locates images on the screen
+        /// </summary>
         private ImageDetector Image_Detector { get; set; }
 
         public ImageDetector GetImageDetector()
@@ -46,10 +79,19 @@ namespace macro.Net.Engine
             return Image_Detector;
         }
 
+        /// <summary>
+        /// Provides realistic mouse movement and basic keyboard input and mouse presses.
+        /// </summary>
         private InputSimulationService.InputSimulationService InputSim { get; set; }
 
+        /// <summary>
+        /// Provides normally distributed random numbers
+        /// </summary>
         private Rand RNG { get; set; }
 
+        /// <summary>
+        /// The first action template from which ExecuteGraph() will start execution
+        /// </summary>
         private ActionTemplate RootActionTemplate { get; set; }
 
         /// <summary>
@@ -64,15 +106,37 @@ namespace macro.Net.Engine
         /// </summary>
         private MatchTemplate MostRecentMatchTemplate { get; set; }
 
+        /// <summary>
+        /// The current MatchTemplate to navigate the graph
+        /// </summary>
         private MatchTemplate CurrentMatchTemplate { get; set; }
 
+        /// <summary>
+        /// The current ActionTemplate to navigate the graph
+        /// </summary>
         private ActionTemplate CurrentActionTemplate { get; set; }
 
         private List<ActionTemplate> AllActionTemplates { get; set; } // used when setting the reset a flag for cycle-detection
         private List<MatchTemplate> AllMatchTemplates { get; set; } // used when setting the reset a flag for cycle-detection
 
+        /// <summary>
+        /// A MatchTemplate result can be used to add regions of interests for the ActionTemplates
+        /// These regions of interests are stored in this dictionary
+        /// A key may be specified in the constructor of the MatchTemplate
+        /// </summary>
         private Dictionary<string, List<Rectangle>> ActionRegionsOfInterestDictionary { get; set; }
 
+        /// <summary>
+        /// Plays audio messages to grab the user's attention when their help is required, e.g. to solve a complex captcha
+        /// </summary>
+        private SpeechSynthesizer Speech_Synthesizer { get; set; }
+
+        /// <summary>
+        /// Adds or updates the rectangles corresponding to the MatchTemplate's Image. or TextMatches
+        /// such that they are accessible to the ActionTemplates.
+        /// If an entry already exists, updates the entry instead of throwing an error.
+        /// </summary>
+        /// <param name="m">The MatchTemplate to check for Image/TextMatches</param>
         private void AddOrUpdateActionRectanglesOfMatchTemplateInDictionary(MatchTemplate m)
         {
             if (m.GetDictionaryKey() == "")
@@ -87,7 +151,7 @@ namespace macro.Net.Engine
                         action_rectangles.Add(im.ActionRectangle);
                     }
 
-                    AddToOrUpdateDictionary(m.GetDictionaryKey(), action_rectangles);
+                    AddToOrUpdateActionDictionary(m.GetDictionaryKey(), action_rectangles);
                 }
             }
             else if(m.TextMatches != null)
@@ -100,12 +164,12 @@ namespace macro.Net.Engine
                         action_rectangles.Add(tm.ActionRectangle);
                     }
 
-                    AddToOrUpdateDictionary(m.GetDictionaryKey(), action_rectangles);
+                    AddToOrUpdateActionDictionary(m.GetDictionaryKey(), action_rectangles);
                 }
             }
         }
 
-        private void AddToOrUpdateDictionary(string key, List<Rectangle> action_regions_of_interest)
+        private void AddToOrUpdateActionDictionary(string key, List<Rectangle> action_regions_of_interest)
         {
             if(!ActionRegionsOfInterestDictionary.ContainsKey(key))
             {
@@ -118,6 +182,11 @@ namespace macro.Net.Engine
             }
         }
 
+        /// <summary>
+        /// Sets the first/root action in the graph. By definition the first element has to be an ActionTemplate.
+        /// This function must be called to set the first ActionTemplate.
+        /// </summary>
+        /// <param name="action_template">This will be the first ActionTemplate in the graph. Typically, the mouse may be moved out of the way or to some constant position.</param>
         public void SetRootActionTemplate(ActionTemplate action_template)
         {
             RootActionTemplate = action_template;
@@ -176,6 +245,9 @@ namespace macro.Net.Engine
             }
         }
 
+        /// <summary>
+        /// For all Action- and MatchTemplates, sets the CycleCheck_Visited bool to false again after checking for a cycle in the graph
+        /// </summary>
         private void ResetCycleCheckFlagsOnTemplates()
         {
             foreach(ActionTemplate a in AllActionTemplates)
@@ -279,10 +351,7 @@ namespace macro.Net.Engine
                     {
                         MessageBox.Show(action_template.UserHelpMessage, "The Application requires your help!");
                     }
-                    if(action_template.UserHelpMessage_UseTTS)
-                    {
-                        throw new NotImplementedException("Text-To-Speech is not yet implemented!");
-                    }
+                    
 
                     while (true)
                     {
@@ -291,7 +360,15 @@ namespace macro.Net.Engine
                             break;
                         }
 
-                        await Task.Delay(300);
+                        if (action_template.UserHelpMessage_UseTTS)
+                        {
+                            if (Speech_Synthesizer.State == SynthesizerState.Ready)
+                            {
+                                Speech_Synthesizer.SpeakAsync(action_template.UserHelpMessage);
+                            }
+                        }
+
+                        await Task.Delay(400);
                     }
                 }
                 else
@@ -307,10 +384,9 @@ namespace macro.Net.Engine
 
         public async void ExecuteGraph()
         {
-            bool next = true; // true: next action or match-template exists. false: none exist and the function will return.
             bool current_template_is_match_template = false;
 
-            while(next)
+            while(true)
             {
                 if(current_template_is_match_template)
                 {
@@ -371,9 +447,10 @@ namespace macro.Net.Engine
 
         /// <summary>
         /// Skips to the next MatchTemplate. Is called when the current match template produced no matches.
-        /// Update this when 
+        /// Update this when MatchTemplates can be added after another MatchTemplate, although the overall design/flow of execution may be updated in the future
+        /// because simply passing through all the MatchTemplates doesn't allow for much control.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True: Successfully found a new MatchTemplate. False: Unable to find a new MatchTemplate.</returns>
         private bool SkipToNextMatchTemplate()
         {
             ActionTemplate tmp_action;
@@ -428,12 +505,20 @@ namespace macro.Net.Engine
             }
         }
 
+        /// <summary>
+        /// Sets CurrentActionTemplate to this ActionTemplate; sets CurrentMatchTemplate to null
+        /// </summary>
+        /// <param name="action_template">Sets CurrentActionTemplate to this ActionTemplate</param>
         private void SetCurrentTemplate(ActionTemplate action_template)
         {
             CurrentMatchTemplate = null;
             CurrentActionTemplate = action_template;
         }
 
+        /// <summary>
+        /// Sets CurrentMatchTemplate to this MatchTemplate; sets CurrentActionTemplate to null
+        /// </summary>
+        /// <param name="match_template">Sets CurrentMatchTemplate to this MatchTemplate</param>
         private void SetCurrentTemplate(MatchTemplate match_template)
         {
             CurrentMatchTemplate = match_template;
