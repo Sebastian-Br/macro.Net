@@ -280,11 +280,11 @@ namespace macro.Net.Engine
                     scroll_value = -1 * scroll_value; // after this, scroll_value is positive
                     if(scroll_value < 1000) // don't accept scroll_value s that are too high
                     {
-                        WaitService.SmartWait(RNG.GetStandardRand(210, 50, 110, 500)); // a small wait period before starting to scroll
+                        WaitService.SmartWait(RNG.GetStandardRandInt(210, 50, 110, 500)); // a small wait period before starting to scroll
                         while(scroll_value > 0)
                         {
                             InputSim.ScrollDownOnce();
-                            WaitService.SmartWait(RNG.GetStandardRand(124, 25, 89, 301)); //this should be done inside the input sim class
+                            WaitService.SmartWait(RNG.GetStandardRandInt(124, 25, 89, 301)); //this should be done inside the input sim class
                             scroll_value--;
                         }
                     }
@@ -293,11 +293,11 @@ namespace macro.Net.Engine
                 {
                     if (scroll_value > 1000) // don't accept scroll_value s that are too high
                     {
-                        WaitService.SmartWait(RNG.GetStandardRand(220, 49, 112, 501));
+                        WaitService.SmartWait(RNG.GetStandardRandInt(220, 49, 112, 501));
                         while (scroll_value > 0)
                         {
                             InputSim.ScrollDownOnce();
-                            WaitService.SmartWait(RNG.GetStandardRand(124, 25, 89, 301));
+                            WaitService.SmartWait(RNG.GetStandardRandInt(124, 25, 89, 301));
                             scroll_value--;
                         }
                     }
@@ -316,18 +316,18 @@ namespace macro.Net.Engine
                         int y_min = target_boundaries.Y;
                         int y_max = target_boundaries.Bottom - 1;
 
-                        int x_target = RNG.GetStandardRand((x_min + x_max) / 2, System.Math.Abs(x_max - x_min)/2, x_min, x_max);
-                        int y_target = RNG.GetStandardRand((y_min + y_max) / 2, System.Math.Abs(y_max - y_min)/2, y_min, y_max);
+                        int x_target = RNG.GetStandardRandInt((x_min + x_max) / 2, System.Math.Abs(x_max - x_min)/2, x_min, x_max);
+                        int y_target = RNG.GetStandardRandInt((y_min + y_max) / 2, System.Math.Abs(y_max - y_min)/2, y_min, y_max);
                         InputSim.MoveMouseToPosition(x_target, y_target);
                     }
                 }
                 else if(mouse_event == ActionTemplate.MouseEvent.SingleClickLeftMouseButton)
                 {
-                    InputSim.ClickLeftMouseButton();
+                    InputSim.SingleClickLeftMouseButton();
                 }
                 else if(mouse_event == ActionTemplate.MouseEvent.SingleClickRightMouseButton)
                 {
-                    InputSim.ClickRightMouseButton();
+                    InputSim.SingleClickRightMouseButton();
                 }
                 else if (mouse_event == ActionTemplate.MouseEvent.SingleClickMiddleMouseButton)
                 {

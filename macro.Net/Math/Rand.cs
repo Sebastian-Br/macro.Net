@@ -1,9 +1,4 @@
-﻿/*
- * 
- * Optional: Add StdRand function for Double & without min/max.
- */
-
-namespace macro.Net.Math // to avoid namespace colission
+﻿namespace macro.Net.Math
 {
     public class Rand
     {
@@ -20,7 +15,7 @@ namespace macro.Net.Math // to avoid namespace colission
         /// <param name="min">The minimum result the caller wants to receive.</param>
         /// <param name="max">The maximum result the caller wants to receive.</param>
         /// <returns>A random std-distributed integer between min and max.</returns>
-        public int GetStandardRand(int mean, double standard_deviation, int min, int max)
+        public int GetStandardRandInt(int mean, double standard_deviation, int min, int max)
         {
             try
             {
@@ -56,11 +51,11 @@ namespace macro.Net.Math // to avoid namespace colission
         {
             double u = 1.0 - r.NextDouble();
             double v = 1.0 - r.NextDouble();
-            double s = System.Math.Sqrt(u * u + v * v);
+            double radius = System.Math.Sqrt(u * u + v * v);
 
             while (true) // the time complexity here is O(let's not get too unlucky)
             {
-                if(s <= 1)
+                if(radius <= 1)
                 {
                     break;
                 }
@@ -68,19 +63,19 @@ namespace macro.Net.Math // to avoid namespace colission
                 {
                     u = 1.0 - r.NextDouble();
                     v = 1.0 - r.NextDouble();
-                    s = System.Math.Sqrt(u * u + v * v);
+                    radius = System.Math.Sqrt(u * u + v * v);
                 }
             }
 
-            double s_half = s / 2; // [0-0.5] most of the values here are in the 0.4-0.5 range
+            double r_half = radius / 2; // [0-0.5] most of the values here are in the 0.4-0.5 range
             double result;
             if(r.Next(int.MaxValue) % 2 == 0) // randomly chooses to add or subtract
             {
-                result = 0.5 + System.Math.Abs(s_half - 0.5); // adding/subtracting the absolute difference between 0.5 and s_half yields a distribution centered around 0.5
+                result = 0.5 + System.Math.Abs(r_half - 0.5); // adding/subtracting the absolute difference between 0.5 and s_half yields a distribution centered around 0.5
             }
             else
             {
-                result = 0.5 - System.Math.Abs(s_half - 0.5);
+                result = 0.5 - System.Math.Abs(r_half - 0.5);
             }
             return result;
         }

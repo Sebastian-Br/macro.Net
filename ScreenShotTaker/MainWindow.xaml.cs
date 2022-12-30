@@ -32,7 +32,7 @@ namespace ScreenShotTaker
         Configuration configuration { get; set; }
         public MainWindow()
         {
-            string appsettingscontent = File.ReadAllText(@"appsettings.json");
+            string appsettingscontent = File.ReadAllText(@"appsettings.json"); // the default image folder is stored in the appsettings file
             configuration = JsonConvert.DeserializeObject<Configuration>(appsettingscontent);
             InitializeComponent();
             TextBoxDefaultPath.Text = configuration.DefaultImagesPath;
@@ -41,32 +41,35 @@ namespace ScreenShotTaker
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new CommonOpenFileDialog();
-            dlg.Title = "Select a default folder";
-            dlg.IsFolderPicker = true;
-            dlg.InitialDirectory = TextBoxDefaultPath.Text;
+            var set_default_folder_dialogue = new CommonOpenFileDialog();
+            set_default_folder_dialogue.Title = "Select a default folder";
+            set_default_folder_dialogue.IsFolderPicker = true;
+            set_default_folder_dialogue.InitialDirectory = TextBoxDefaultPath.Text;
 
-            dlg.AddToMostRecentlyUsedList = false;
-            dlg.AllowNonFileSystemItems = false;
-            dlg.DefaultDirectory = TextBoxDefaultPath.Text;
-            dlg.EnsureFileExists = true;
-            dlg.EnsurePathExists = true;
-            dlg.EnsureReadOnly = false;
-            dlg.EnsureValidNames = true;
-            dlg.Multiselect = false;
-            dlg.ShowPlacesList = true;
+            set_default_folder_dialogue.AddToMostRecentlyUsedList = false;
+            set_default_folder_dialogue.AllowNonFileSystemItems = false;
+            set_default_folder_dialogue.DefaultDirectory = TextBoxDefaultPath.Text;
+            set_default_folder_dialogue.EnsureFileExists = true;
+            set_default_folder_dialogue.EnsurePathExists = true;
+            set_default_folder_dialogue.EnsureReadOnly = false;
+            set_default_folder_dialogue.EnsureValidNames = true;
+            set_default_folder_dialogue.Multiselect = false;
+            set_default_folder_dialogue.ShowPlacesList = true;
 
-            if (dlg.ShowDialog() == CommonFileDialogResult.Ok)
+            if (set_default_folder_dialogue.ShowDialog() == CommonFileDialogResult.Ok)
             {
-                var folder = dlg.FileName;
+                string folder = set_default_folder_dialogue.FileName;
                 TextBoxDefaultPath.Text = folder;
                 configuration.DefaultImagesPath = folder;
                 string jsonString = JsonConvert.SerializeObject(configuration, Formatting.Indented);
                 File.WriteAllText("appsettings.json", jsonString);
-                // Do something with selected folder string
             }
         }
 
+        /// <summary>
+        /// Continuously checks whether the hotkey (LCONTROL) to take a screenshot is pressed
+        /// </summary>
+        /// <returns></returns>
         public async Task Check_Screenshot_Hotkey()
         {
             System.Drawing.Size ScreenSize = new System.Drawing.Size(System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width, System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height);
@@ -92,12 +95,12 @@ namespace ScreenShotTaker
                             Screenshot.Save(openFileDialog.FileName);
                         }
 
-                        Task.Delay(200);
+                        await Task.Delay(200);
                         Can_Take_Screenshot = true;
                     }
                 }
 
-                Task.Delay(200);
+                await Task.Delay(200);
             }
         }
     }

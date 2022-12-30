@@ -28,15 +28,15 @@ namespace ScreenShotTaker
         private static KeyStates GetKeyStateFromCode(int code)
         {
             KeyStates state = KeyStates.None;
-            short retVal = GetKeyState(code);
+            short short_key_state = GetKeyState(code);
 
             //If the high-order bit is 1, the key is down
             //otherwise, it is up.
-            if ((retVal & 0x8000) == 0x8000)
+            if ((short_key_state & 0x8000) == 0x8000)
                 state |= KeyStates.Down;
 
             //If the low-order bit is 1, the key is toggled.
-            if ((retVal & 1) == 1)
+            if ((short_key_state & 1) == 1)
                 state |= KeyStates.Toggled;
 
             return state;

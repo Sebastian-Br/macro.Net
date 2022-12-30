@@ -101,9 +101,9 @@ namespace macro.Net.ImageDetection
         /// <param name="search_for">The bytes that make up the search_for image</param>
         /// <param name="search_for_width">The width of the search_for image</param>
         /// <param name="search_for_height">The height of the search_for image</param>
-        /// <param name="max_difference_per_px">The maximum difference that each R, G and B component of the pixel's color is allowed to deviate from the pixel that is searched for</param>
+        /// <param name="max_difference_per_color_channel">The maximum difference that each R, G and B component of the pixel's color is allowed to deviate from the pixel that is searched for</param>
         /// <returns></returns>
-        public ImageMatch FindFirstImageInImage(byte[] search_in, Rectangle search_in_rect, byte[] search_for, int search_for_width, int search_for_height, int max_difference_per_px)
+        public ImageMatch FindFirstImageInImage(byte[] search_in, Rectangle search_in_rect, byte[] search_for, int search_for_width, int search_for_height, int max_difference_per_color_channel)
         {
             try
             {
@@ -112,7 +112,7 @@ namespace macro.Net.ImageDetection
                 byte[] searchForBmpBytes = search_for;
                 Rectangle? r = ImageProcessor.FindFirstImageInImage_24bppRGB(
                     search_in_bytes, search_in_rect.Width, search_in_rect.Height,
-                    searchForBmpBytes, search_for_width, search_for_height, max_difference_per_px);
+                    searchForBmpBytes, search_for_width, search_for_height, max_difference_per_color_channel);
                 if (r != null)
                 {
                     Rectangle result_rectangle = new(r.Value.X + search_in_rect.X, r.Value.Y + search_in_rect.Y, r.Value.Width, r.Value.Height);

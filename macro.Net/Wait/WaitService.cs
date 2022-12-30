@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace macro.Net.Wait
 {
+    /// <summary>
+    /// Exposes an extremely accurate Wait function
+    /// </summary>
     public static class WaitService
     {
         /// <summary>

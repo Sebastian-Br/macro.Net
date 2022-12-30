@@ -8,9 +8,13 @@ using System.Diagnostics;
 using macro.Net.Math;
 using macro.Net.DebugPrint;
 using System.Security.Cryptography;
+using macro.Net.Wait;
 
 namespace macro.Net.InputSimulationService
 {
+    /// <summary>
+    /// This class provides realistic mouse movement somewhat resembling how a human would move the mouse
+    /// </summary>
     public class Mouse
     {
         public Mouse(Rand _rng, bool _debug)
@@ -39,6 +43,11 @@ namespace macro.Net.InputSimulationService
 
         private bool Debug { get; set; }
 
+        /// <summary>
+        /// Moves the mouse in a natural way (with jitter, and not overly fast)
+        /// </summary>
+        /// <param name="target_x">The target X coordinate on the screen</param>
+        /// <param name="target_y">The target Y coordinate on the screen</param>
         public void MouseMoveSimple(int target_x, int target_y)
         {
             GetCursorPos(ref point_cursor_position);
@@ -56,18 +65,18 @@ namespace macro.Net.InputSimulationService
             POINT p = new POINT();
             //dbg("MMove() dX " + dX + " dY " + dY);
             GetCursorPos(ref p);
-            int xPos = p.x + dX;
-            int yPos = p.y + dY;
-            if (xPos < 0)
-                xPos = 0;
-            if (yPos < 0)
-                yPos = 0;
-            if (xPos > ScreenWidthMinus1)
-                xPos = ScreenWidthMinus1;
-            if (yPos > ScreenHeightMinus1)
-                yPos = ScreenHeightMinus1;
+            int new_x_position = p.x + dX;
+            int new_y_position = p.y + dY;
+            if (new_x_position < 0)
+                new_x_position = 0;
+            if (new_y_position < 0)
+                new_y_position = 0;
+            if (new_x_position > ScreenWidthMinus1)
+                new_x_position = ScreenWidthMinus1;
+            if (new_y_position > ScreenHeightMinus1)
+                new_y_position = ScreenHeightMinus1;
             //dbg("Moved from (" + p.x + "," + p.y + ") to (" + xPos + "," + yPos + ")");
-            SetCursorPos(xPos, yPos);
+            SetCursorPos(new_x_position, new_y_position);
         }
 
         /// <summary>
@@ -88,7 +97,7 @@ namespace macro.Net.InputSimulationService
             if(VMath.IsInCircle(target_x, target_Y, point_cursor_position.x, point_cursor_position.y, 4))
             {
                 Dbg.Print("MouseMoveSimple() - Reached target!", Debug);
-                SmartWait(time_ms_left - 1);
+                WaitService.SmartWait(time_ms_left - 1);
                 return;
             }
             //dbg("MouseMove2(): @(" + p.x + "," + p.y + ")" + " aiming@(" + X + "," + Y +")");
@@ -100,13 +109,13 @@ namespace macro.Net.InputSimulationService
             int movement_duration; 
             if (time_ms_left > 97 + rd.Next(-6, 18) && rd.Next(0, 99) == 8)
             {
-                movement_duration = 3 + RNG.GetStandardRand(9, 5, 1, 18); // micro-wait.
+                movement_duration = 3 + RNG.GetStandardRandInt(9, 5, 1, 18); // micro-wait.
                 Dbg.Print("MicroWait!", Debug);
                 goto loc_wait;
             }
             else
             {
-                movement_duration = RNG.GetStandardRand(2, 0.75, 1, 3); // using GetStandardRand(2, 0.75, 1, 3) yields 2:50%, 1/3:25%
+                movement_duration = RNG.GetStandardRandInt(2, 0.75, 1, 3); // using GetStandardRand(2, 0.75, 1, 3) yields 2:50%, 1/3:25%
             }
             //dbg("MouseMove2(): Chose movementDuration: " + movementDuration);
             int movement_distance_px = movement_duration * (int)px_per_ms_speed_min;
@@ -139,7 +148,7 @@ namespace macro.Net.InputSimulationService
             //dbg("Chose newdX " + newdx + " newdy " + newdy);
             MMove(newdx, newdy);
         loc_wait:
-            SmartWait(movement_duration);
+            WaitService.SmartWait(movement_duration);
             MouseMoveSimple_Rec(target_x, target_Y, time_ms_left - movement_duration, last_deviation_angle);
         }
 
@@ -180,7 +189,7 @@ namespace macro.Net.InputSimulationService
         private int findTimeToTargetMs(int pxDistance)
         {
             double divisor = 2.4;
-            int divisor_rand_seed = RNG.GetStandardRand(5, 3, 0, 10);
+            int divisor_rand_seed = RNG.GetStandardRandInt(5, 3, 0, 10);
             divisor += ((double)divisor_rand_seed) * 0.1d;
             int ret = 2 + rd.Next(0, 3) + rd.Next(1, pxDistance % 31 + pxDistance / 7) + (int)((double)pxDistance / divisor);
             return ret;
@@ -227,22 +236,6 @@ namespace macro.Net.InputSimulationService
             if (newDx == 0)
                 return 1;
             return 0;
-        }
-
-        /// <summary>
-        /// Wait 'ms' milliseconds.
-        /// This function is very accurate, unlike Sleep() which delegates the Thread
-        /// </summary>
-        /// <param name="ms">Milliseconds.</param>
-        private static void SmartWait(int ms)
-        {
-            System.Diagnostics.Stopwatch watch = new();
-            watch.Start();
-            while (watch.ElapsedMilliseconds < ms)
-            {
-                System.Threading.Thread.SpinWait(4);
-            }
-            watch.Stop();
         }
     }
 }

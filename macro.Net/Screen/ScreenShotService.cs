@@ -11,6 +11,9 @@ using macro.Net.ImageProcessing;
 
 namespace macro.Net.Screen
 {
+    /// <summary>
+    /// Takes screenshots and returns the data as byte array(s)
+    /// </summary>
     public class ScreenShotService
     {
         private Size ScreenSize { get; set; }
@@ -72,8 +75,7 @@ namespace macro.Net.Screen
                     screenshots_rectangles.Add(screenshot_tile_rectangle);
                 }
 
-                ScreenImageTile tile = new();
-                tile.anchor_y = upper_left_corner_Y; //Tesseract can only know the position of text relative to the screenshot that is passed to it. The absolute position on the screen has to be restored
+                ScreenImageTile tile = new(upper_left_corner_Y); //Tesseract can only know the position of text relative to the screenshot that is passed to it. The absolute position on the screen has to be restored using this value
                 tile.Image = ImageProcessor.ToByteArray_AnyFormat(screenshot, ImageFormat.Bmp);
                 result_screenshot_tiles.Add (tile);
                 if (skip_last_split)
