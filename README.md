@@ -1,6 +1,6 @@
 # macro.Net
 
-UI automation framework for Windows platforms. Can locate images and text on the screen efficiently, move the mouse
+UI automation framework for Windows platforms. Can locate images and text on the screen efficiently, move the mouse similar to how a human would, and perform simple keystrokes.
 
 Prerequisites:
   * Only tested on a 1920x1080 screen with the Tesseract OCR version present in this repository
