@@ -41,8 +41,8 @@ def main():
 
     project_name_re_escaped = re.escape(project_name)
     pattern = re.compile(r"///.*?file:///.*?/" + project_name_re_escaped)
-    # re doesn't understand named groups
-    new_path = "file:///" + working_directory.as_uri()
+    # re doesn't understand named groups -> https://docs.python.org/3/howto/regex.html
+    new_path = working_directory.as_uri()
     for code_file in get_relevant_cs_files(working_directory):
         new_code, changes = fix_file(code_file, new_path, pattern)
         if changes:
